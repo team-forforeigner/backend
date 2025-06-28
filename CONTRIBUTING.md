@@ -45,3 +45,44 @@ ForForeigner 프로젝트에 기여해주셔서 감사합니다!
 
 ##### 예시
 git commit -m "feat: 로그인 폼 UI 구현"
+
+## 🤝 협업 방법 및 작업 순서
+
+1. 항상 `develop` 브랜치로 이동해 최신 코드를 받아옵니다.
+
+```bash
+git checkout develop
+git pull origin develop
+```
+
+2. 새 기능 개발이나 버그 수정을 위해 기능 브랜치를 만듭니다.
+
+```bash
+git checkout -b feature/기능명
+```
+
+3. 작업 완료 후 변경사항을 스테이징하고 커밋합니다.
+
+```bash
+git add .
+git commit -m "feat: 작업 내용 요약"
+```
+
+4. 원격 저장소에 기능 브랜치를 푸시합니다.
+
+```bash
+git push origin feature/기능명
+```
+
+5. GitHub에서 develop 브랜치로 Pull Request를 생성하고 팀원 리뷰를 받습니다.
+
+6. 리뷰 요청 사항을 반영해 수정한 뒤 다시 푸시합니다.
+
+7. PR이 승인되면 develop 브랜치에 병합합니다.
+
+8. 작업 종료 후 다시 develop 브랜치로 돌아가 최신 상태를 받아 작업을 시작합니다.
+
+```bash
+git checkout develop
+git pull origin develop
+```
