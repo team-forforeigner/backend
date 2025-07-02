@@ -61,6 +61,14 @@ git pull origin develop
 git checkout -b feature/기능명
 ```
 
+<GitHub에서 브랜치 생성하는 법>
+
+⚠️ 주의사항 : 부모 브랜치를 'develop' 설정하세요.
+
+<img src="https://github.com/user-attachments/assets/5eb84335-a30f-45fb-b50c-e10d774c70a4" width="400">
+
+<img src="https://github.com/user-attachments/assets/4f1fcd10-3366-4bdc-b48d-457906dd0a81" width="400">
+
 3. 작업 완료 후 변경사항을 스테이징하고 커밋합니다.
 
 ```bash
