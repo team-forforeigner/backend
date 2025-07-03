@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>나의 게시판</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: #f7f8fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center; /* 가로 중앙 정렬 */
+            align-items: center;     /* 세로 중앙 정렬 */
+            min-height: 100vh;
+        }
+        .container {
+            background: #fff;
+            padding: 40px 30px; /* 패딩 값 조정 */
+            border-radius: 22px;
+            box-shadow: 0 7px 40px rgba(0,0,0,0.09);
+            text-align: center;
+            width: 90vw;
+            max-width: 600px; /* 너비 조정 */
+        }
+        .main-title {
+            margin-bottom: 30px;
+            color: #222;
+            font-weight: 900;
+            font-size: 2.7rem;
+            letter-spacing: 1px;
+            font-family: 'Montserrat', 'Noto Sans KR', sans-serif;
+        }
+        .btn-row {
+            display: flex;
+            flex-direction: column; /* 버튼을 세로로 정렬 */
+            align-items: center; /* 버튼 중앙 정렬 */
+            gap: 15px; /* 버튼 사이 간격 */
+        }
+        .btn {
+            width: 80%; /* 버튼 너비 통일 */
+            max-width: 250px; /* 최대 너비 지정 */
+            min-height: 50px;
+            background: #737ded;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2rem; /* 폰트 크기 조정 */
+            cursor: pointer;
+            font-weight: 700;
+            transition: background 0.2s, box-shadow 0.2s;
+            box-shadow: 0 1.5px 7px rgba(100,100,200,0.07);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none; /* a 태그의 밑줄 제거 */
+        }
+        .btn:hover {
+            background: #5a62b6;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="main-title">forforeignery</div>
+
+    <div class="btn-row">
+        <a class="btn" href="/board/save">새 글 작성하기</a>
+        <a class="btn" href="/board/">게시글 목록 보기</a>
+    </div>
+</div>
+</body>
+</html>

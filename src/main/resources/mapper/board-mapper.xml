@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.codingrecipe.board.repository.BoardMapper">
+
+    <select id="findAll" resultType="BoardDTO">
+        SELECT
+            id,
+            board_title,
+            board_writer,
+            board_hits,
+            board_likes, created_time,
+            file_attached
+        FROM board_table
+        ORDER BY id DESC
+    </select>
+
+    <select id="findById" parameterType="long" resultType="BoardDTO">
+        SELECT
+            id,
+            board_title,
+            board_writer,
+            board_pass,
+            board_contents,
+            board_hits,
+            board_likes, created_time,
+            updated_time,
+            file_attached
+        FROM board_table
+        WHERE id = #{id}
+    </select>
+
+    <insert id="save" parameterType="BoardDTO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO board_table(board_writer, board_pass, board_title, board_contents, file_attached, board_likes)
+        VALUES(#{boardWriter}, #{boardPass}, #{boardTitle}, #{boardContents}, #{fileAttached}, 0)
+    </insert>
+
+    <update id="updateHits" parameterType="long">
+        UPDATE board_table SET board_hits = board_hits + 1 WHERE id = #{id}
+    </update>
+
+    <update id="incrementLikes" parameterType="long">
+        UPDATE board_table SET board_likes = board_likes + 1 WHERE id = #{id}
+    </update>
+
+    <update id="update" parameterType="BoardDTO">
+        UPDATE board_table
+        <set>
+            <if test="boardTitle != null and boardTitle != ''">
+                board_title = #{boardTitle},
+            </if>
+            <if test="boardContents != null and boardContents != ''">
+                board_contents = #{boardContents},
+            </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="long">
+        DELETE FROM board_table WHERE id = #{id}
+    </delete>
+
+    <insert id="saveFile" parameterType="BoardFileDTO">
+        INSERT INTO board_file_table(original_file_name, stored_file_name, board_id)
+        VALUES (#{originalFileName}, #{storedFileName}, #{boardId})
+    </insert>
+
+    <select id="findFile" parameterType="long" resultType="BoardFileDTO">
+        SELECT
+            id,
+            original_file_name,
+            stored_file_name,
+            board_id
+        FROM board_file_table WHERE board_id = #{id}
+    </select>
+</mapper>
