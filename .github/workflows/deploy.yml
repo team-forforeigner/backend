@@ -2,8 +2,6 @@ name: Deploy Backend to EC2
  
 on:
   push:
-    paths:
-      - 'backend/**'
     branches: # 배포 기준이 되는 브랜치 
       - release 
       - feature/presignedUrl
