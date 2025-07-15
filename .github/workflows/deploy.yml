@@ -4,8 +4,9 @@ on:
   push:
     paths:
       - 'backend/**'
-    branches:
-      - release # 배포 기준이 되는 브랜치 : release
+    branches: # 배포 기준이 되는 브랜치 
+      - release 
+      - feature/presignedUrl
 
 jobs:
   deploy:
