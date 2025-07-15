@@ -22,7 +22,6 @@ jobs:
         distribution: 'temurin'
 
     - name: Build JAR
-      working-directory: backend
       run: ./gradlew clean build  
 
     - name: Save SSH key
