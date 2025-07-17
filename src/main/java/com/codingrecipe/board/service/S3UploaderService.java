@@ -59,7 +59,7 @@ public class S3UploaderService {
         PutObjectRequest request = PutObjectRequest.builder()
                 .bucket(bucket)
                 .key(fileName)
-                .acl("public-read") // *해당 파일(객체)만 퍼블릭 권한 부여
+                .acl("public-read") // * 해당 파일(객체)만 퍼블릭 권한 부여
                 .build();
 
         s3Client.putObject(request, RequestBody.fromFile(uploadFile));
