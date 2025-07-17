@@ -1,6 +1,6 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '3.4.5'
+	id 'org.springframework.boot' version '3.5.3'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -13,6 +13,11 @@ java {
 	}
 }
 
+// [배포 시 필요] AWS SDK 버전 관리를 위한 설정
+ext {
+	set('springCloudVersion', "3.1.0")
+}
+
 configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
@@ -23,17 +28,41 @@ repositories {
 	mavenCentral()
 }
 
+// [배포 시 필요] AWS SDK 버전 관리를 위한 BOM(Bill of Materials)
+dependencyManagement {
+	imports {
+		mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudVersion}"
+	}
+}
+
 dependencies {
+	// 1. 웹, JPA, Validation
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// 2. 로그인 기능 의존성
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+	// 3. 기타 & 데이터베이스 & 테스트
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'com.mysql:mysql-connector-j'
-	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// 4. Thymeleaf (서버 렌더링용)
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+	// 5. [배포 시 필요] AWS S3 라이브러리
+	implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
+	implementation platform('software.amazon.awssdk:bom:2.25.58') // [추가!]
+	implementation 'software.amazon.awssdk:s3' // [추가! AWS SDK v2로 변경]
 }
 
 tasks.named('test') {

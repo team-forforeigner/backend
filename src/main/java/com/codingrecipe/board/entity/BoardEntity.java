@@ -1,6 +1,6 @@
 package com.codingrecipe.board.entity;
 
-import com.codingrecipe.board.dto.BoardDTO; // <-- 제가 빠뜨렸던 바로 이 import 구문입니다!
+import com.codingrecipe.board.domain.Member;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,12 +17,6 @@ public class BoardEntity extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 20, nullable = false)
-    private String boardWriter;
-
-    @Column
-    private String boardPass;
-
     @Column
     private String boardTitle;
 
@@ -36,35 +30,20 @@ public class BoardEntity extends BaseEntity {
     private int boardLikes;
 
     @Column
-    private int fileAttached;
+    private int fileAttached; // 파일 첨부 여부 (1: 첨부, 0: 미첨부)
+
+    // Board(N) : Category(1) 관계
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private CategoryEntity category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id")
+    private Member writer;
 
     @OneToMany(mappedBy = "boardEntity", cascade = CascadeType.REMOVE, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<BoardFileEntity> boardFileEntityList = new ArrayList<>();
 
     @OneToMany(mappedBy = "boardEntity", cascade = CascadeType.REMOVE, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<CommentEntity> commentEntityList = new ArrayList<>();
-
-    public static BoardEntity toSaveEntity(BoardDTO boardDTO) {
-        BoardEntity boardEntity = new BoardEntity();
-        boardEntity.setBoardWriter(boardDTO.getBoardWriter());
-        boardEntity.setBoardPass(boardDTO.getBoardPass());
-        boardEntity.setBoardTitle(boardDTO.getBoardTitle());
-        boardEntity.setBoardContents(boardDTO.getBoardContents());
-        boardEntity.setBoardHits(0);
-        boardEntity.setBoardLikes(0);
-        boardEntity.setFileAttached(0);
-        return boardEntity;
-    }
-
-    public static BoardEntity toSaveFileEntity(BoardDTO boardDTO) {
-        BoardEntity boardEntity = new BoardEntity();
-        boardEntity.setBoardWriter(boardDTO.getBoardWriter());
-        boardEntity.setBoardPass(boardDTO.getBoardPass());
-        boardEntity.setBoardTitle(boardDTO.getBoardTitle());
-        boardEntity.setBoardContents(boardDTO.getBoardContents());
-        boardEntity.setBoardHits(0);
-        boardEntity.setBoardLikes(0);
-        boardEntity.setFileAttached(1);
-        return boardEntity;
-    }
 }

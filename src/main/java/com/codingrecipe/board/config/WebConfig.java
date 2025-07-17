@@ -8,7 +8,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    // [수정] application.yml의 'file-upload-path'와 이름을 정확히 일치시킵니다.
     @Value("${file-upload-path}")
     private String uploadPath;
 

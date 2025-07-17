@@ -1,6 +1,8 @@
 package com.codingrecipe.board.repository;
 
 import com.codingrecipe.board.entity.BoardEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -19,4 +21,13 @@ public interface BoardRepository extends JpaRepository<BoardEntity, Long> {
     void incrementLikes(@Param("id") Long id);
 
     List<BoardEntity> findTop3ByOrderByBoardLikesDesc();
+
+    // 카테고리 ID로 게시글 목록을 페이징하여 조회
+    Page<BoardEntity> findByCategoryId(Long categoryId, Pageable pageable);
+
+    // 작성자 ID로 게시글 목록을 페이징하여 조회
+    Page<BoardEntity> findByWriter_UserId(String userId, Pageable pageable);
+
+    // 제목 또는 내용에 키워드가 포함된 게시글을 페이징하여 검색
+    Page<BoardEntity> findByBoardTitleContainingOrBoardContentsContaining(String titleKeyword, String contentsKeyword, Pageable pageable);
 }
