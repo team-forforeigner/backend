@@ -15,11 +15,6 @@ jobs:
     - name: Github Repository 파일 불러오기
       uses: actions/checkout@v4
 
-    - name: s3-upload.html 마지막 수정 시간 확인 (dev)
-      run: |
-        echo "✅ s3-upload.html 수정 시간 확인:"
-        stat ./src/main/resources/static/s3-upload.html
-
     - name: JDK 17 설치
       uses: actions/setup-java@v3
       with:
