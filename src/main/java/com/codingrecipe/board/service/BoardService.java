@@ -36,8 +36,8 @@ public class BoardService {
     private final S3UploaderService s3UploaderService;
 
     // 로컬 파일 저장 경로. S3 사용 시에는 이 필드가 필요 없습니다.
-    @Value("${file-upload-path}")
-    private String uploadPath;
+    /*@Value("${file-upload-path}")
+    private String uploadPath;*/ // [임시 주석 처리!]
 
     @Transactional
     public Long save(BoardDTO boardDTO, String userId) throws IOException {
