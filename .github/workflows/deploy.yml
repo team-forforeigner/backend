@@ -51,15 +51,8 @@ jobs:
 
           mkdir -p /home/ec2-user/app 
 
-          # 기존 앱 프로세스 종료 (app.jar 기준)
-          pids=$(pgrep -f 'java -jar app.jar')
-          if [ -n "$pids" ]; then
-            echo "💡 기존 app.jar 프로세스 종료"
-            kill $pids
-          else
-            echo "💡 종료할 app.jar 프로세스 없음"
-          fi
-
+          # 기존 프로세스 종료 (8080 포트 기준)
+          fuser -k 8080/tcp || true
           sleep 3
 
           # 새로운 JAR 덮어쓰기
