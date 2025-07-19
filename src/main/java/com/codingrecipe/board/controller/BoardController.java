@@ -24,7 +24,7 @@ public class BoardController {
     private final BoardService boardService;
 
     @PostMapping
-    public ResponseEntity<?> save(@RequestBody BoardDTO boardDTO,
+    public ResponseEntity<?> save(@ModelAttribute BoardDTO boardDTO,
                                   @AuthenticationPrincipal String userId) {
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
@@ -32,22 +32,8 @@ public class BoardController {
         try {
             Long savedId = boardService.save(boardDTO, userId);
             return ResponseEntity.status(HttpStatus.CREATED).body(savedId);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("게시글 작성 중 오류가 발생했습니다: " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/with-file")
-    public ResponseEntity<?> saveWithFile(@ModelAttribute BoardDTO boardDTO,
-                                          @AuthenticationPrincipal String userId) {
-        if (userId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
-        }
-        try {
-            Long savedId = boardService.save(boardDTO, userId);
-            return ResponseEntity.status(HttpStatus.CREATED).body(savedId);
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("파일 저장 중 오류가 발생했습니다.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("파일 처리 중 오류가 발생했습니다: " + e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("게시글 작성 중 오류가 발생했습니다: " + e.getMessage());
         }
@@ -160,4 +146,5 @@ public class BoardController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
+
 }
