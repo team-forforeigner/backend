@@ -38,7 +38,7 @@ jobs:
         key: ${{ secrets.EC2_KEY }}
         source: ./build/libs/app.jar
         target: /home/ec2-user/temp # 임시 폴더 (temp)
-    
+
     - name: SSH로 EC2 접속 후 재시작
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -48,19 +48,32 @@ jobs:
         script_stop: true
         script: |
           echo "⚡ 서버 재시작 시작"
+
           mkdir -p /home/ec2-user/app 
-          mv /home/ec2-user/temp/build/libs/app.jar /home/ec2-user/app
-    
+
+          # 기존 앱 프로세스 종료 (app.jar 기준)
+          pids=$(pgrep -f 'java -jar app.jar')
+          if [ -n "$pids" ]; then
+            echo "💡 기존 app.jar 프로세스 종료"
+            kill $pids
+          else
+            echo "💡 종료할 app.jar 프로세스 없음"
+          fi
+
+          sleep 3
+
+          # 새로운 JAR 덮어쓰기
+          mv /home/ec2-user/temp/build/libs/app.jar /home/ec2-user/app/app.jar
+
           cd /home/ec2-user/app
-    
-          # 기존 8080 포트 종료
-          fuser -k 8080/tcp || true
-    
-          # Spring Boot 재시작
+
+          # 새 JAR 실행
           nohup java -jar app.jar > ./output.log 2>&1 &
-    
+
           # 임시 폴더 삭제
           rm -rf /home/ec2-user/temp
+
           echo "✅ 배포 완료"
+    
 
     
