@@ -57,8 +57,8 @@ jobs:
           fuser -k 8080/tcp || true
     
           # Spring Boot 재시작
-          nohup java -jar app.jar > ./output.log 2>&1 &
-    
+          nohup java -Djava.io.tmpdir=/home/ec2-user/tmp -jar app.jar > output.log 2>&1 & 
+          
           # 임시 폴더 삭제
           rm -rf /home/ec2-user/temp
           echo "✅ 배포 완료"
