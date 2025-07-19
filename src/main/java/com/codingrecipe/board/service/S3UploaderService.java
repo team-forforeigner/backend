@@ -83,14 +83,36 @@ public class S3UploaderService {
     }
 
     // MultipartFile -> File 변환
-    private Optional<File> convert(MultipartFile file) throws  IOException {
-        File convertFile = new File(System.getProperty("java.io.tmpdir") + "/" + file.getOriginalFilename());
-        if(convertFile.createNewFile()) {
-            try (FileOutputStream fos = new FileOutputStream(convertFile)) {
-                fos.write(file.getBytes());
-            }
-            return Optional.of(convertFile);
+    // [수정!] EC2 홈 디렉터리 내 tmp 폴더에 임시 파일을 저장하도록 변경했습니다. (EC2에 java.io.tmpdir 쓰기 권한이 없습니다)
+    //       (예: /home/ec2-user/tmp)
+    private Optional<File> convert(MultipartFile file) throws IOException {
+        // 홈 디렉터리 내 tmp 경로 지정 (예: /home/ec2-user/tmp)
+        String homeTmpDir = System.getProperty("user.home") + "/tmp";
+
+        // tmp 폴더가 없으면 생성
+        File dir = new File(homeTmpDir);
+        if (!dir.exists()) {
+            dir.mkdirs();
         }
-        return Optional.empty();
+
+        // 파일명 분리 (확장자 포함)
+        String originalFilename = file.getOriginalFilename();
+        String prefix = "tempfile";
+        String suffix = null;
+
+        if (originalFilename != null && originalFilename.contains(".")) {
+            prefix = originalFilename.substring(0, originalFilename.lastIndexOf('.'));
+            suffix = originalFilename.substring(originalFilename.lastIndexOf('.'));
+        }
+
+        // 임시 파일 생성 (지정 폴더 아래)
+        File convertFile = File.createTempFile(prefix, suffix, dir);
+
+        try (FileOutputStream fos = new FileOutputStream(convertFile)) {
+            fos.write(file.getBytes());
+        }
+
+        return Optional.of(convertFile);
     }
+
 }
