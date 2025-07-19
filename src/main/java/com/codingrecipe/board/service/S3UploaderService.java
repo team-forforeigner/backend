@@ -87,7 +87,7 @@ public class S3UploaderService {
     //       (예: /home/ec2-user/tmp)
     private Optional<File> convert(MultipartFile file) throws IOException {
         // 홈 디렉터리 내 tmp 경로 지정 (예: /home/ec2-user/tmp)
-        String homeTmpDir = System.getProperty("user.home") + "/tmp";
+        String homeTmpDir = "/home/ec2-user/tmp";
 
         // tmp 폴더가 없으면 생성
         File dir = new File(homeTmpDir);
