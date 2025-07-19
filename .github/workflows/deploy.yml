@@ -5,7 +5,7 @@ on:
     branches: # 배포 기준이 되는 브랜치 
       - release
       - feature/board-deploy
- 
+
 jobs:
   deploy:
     name: Deploy to EC2
