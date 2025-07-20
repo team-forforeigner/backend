@@ -1,10 +1,16 @@
 package com.codingrecipe.tip;
 
 import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
 @Table(name = "tip")
-public class Tip {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class TipEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

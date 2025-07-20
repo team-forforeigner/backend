@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>파일 업로드 폼</title>
+</head>
+<body>
+<h1>JSON 파일 업로드</h1>
+<form action="/api/tip/upload" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" accept=".json" required />
+    <button type="submit">업로드</button>
+</form>
+</body>
+</html>
