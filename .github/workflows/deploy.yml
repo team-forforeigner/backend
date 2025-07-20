@@ -56,7 +56,7 @@ jobs:
           sleep 3
 
           # 새로운 JAR 덮어쓰기
-          mv /home/ec2-user/temp/app.jar /home/ec2-user/app/app.jar
+          mv /home/ec2-user/temp/build/libs/app.jar /home/ec2-user/app/app.jar
 
           cd /home/ec2-user/app
 
