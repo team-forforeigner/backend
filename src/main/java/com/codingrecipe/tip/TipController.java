@@ -1,18 +1,17 @@
 package com.codingrecipe.tip;
 
+import com.codingrecipe.tip.service.TipImportService;
+import com.codingrecipe.tip.service.TipService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -21,8 +20,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TipController {
 
+    private final TipService tipService;
     private final TipImportService tipImportService;
     private final ObjectMapper objectMapper;
+
+    @GetMapping("/api/tips")
+    public Page<TipDTO> getTipsByCategory(@RequestParam(required = false)TipCategory category, Pageable pageable) {
+        if (category != null) {
+            return tipService.findByCategory(category, pageable);
+        }
+        return tipService.findAll(pageable);
+    }
 
     // 설명 : JSON 파일로부터 여러 Tip을 한 번에 DB에 저장한다.
     @PostMapping("/upload")

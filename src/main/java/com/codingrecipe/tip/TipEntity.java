@@ -12,7 +12,8 @@ import lombok.*;
 @Builder
 public class TipEntity {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String question;
@@ -21,7 +22,10 @@ public class TipEntity {
 
     private String source;
 
+    @ElementCollection(targetClass = TipCategory.class)
+    @CollectionTable(name = "tip_categories", joinColumns = @JoinColumn(name = "tip_id"))
     @Enumerated(EnumType.STRING)
+    @Column(name = "category")
     private TipCategory category;
 
 }

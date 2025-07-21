@@ -1,11 +1,12 @@
-package com.codingrecipe.tip;
+package com.codingrecipe.tip.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.codingrecipe.tip.TipDTO;
+import com.codingrecipe.tip.TipEntity;
+import com.codingrecipe.tip.repository.TipRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 

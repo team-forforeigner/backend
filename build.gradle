@@ -15,7 +15,7 @@ java {
 
 // [배포 시 필요] AWS SDK 버전 관리를 위한 설정
 ext {
-	set('springCloudVersion', "3.1.0")
+//	set('springCloudVersion', "3.1.0")
 }
 
 configurations {
@@ -31,7 +31,7 @@ repositories {
 // [배포 시 필요] AWS SDK 버전 관리를 위한 BOM(Bill of Materials)
 dependencyManagement {
 	imports {
-		mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudVersion}"
+//		mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudVersion}"
 	}
 }
 
