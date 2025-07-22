@@ -24,6 +24,7 @@ public class BoardDTO {
     private MultipartFile boardFile;
     private String originalFileName;
     private String storedFileName;
+    private String fileUrl; // [추가] Pre-signed URL을 담을 필드
 
     // 카테고리 정보 필드
     private Long categoryId;

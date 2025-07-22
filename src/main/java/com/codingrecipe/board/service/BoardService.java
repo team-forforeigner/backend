@@ -31,13 +31,11 @@ public class BoardService {
     private final BoardFileRepository boardFileRepository;
     private final CategoryRepository categoryRepository;
     private final BoardLikeRepository boardLikeRepository;
+    private final S3UploaderService s3UploaderService; // S3 서비스 활성화
 
-    // [배포 시 주석 해제] S3 서비스를 사용하려면 아래 줄의 주석을 해제하세요.
-    private final S3UploaderService s3UploaderService;
-
-    // 로컬 파일 저장 경로. S3 사용 시에는 이 필드가 필요 없습니다.
-    /*@Value("${file-upload-path}")
-    private String uploadPath;*/ // [임시 주석 처리!]
+    // 로컬 파일 저장 경로
+    // @Value("${file-upload-path}")
+    // private String uploadPath;
 
     @Transactional
     public Long save(BoardDTO boardDTO, String userId) throws IOException {
@@ -66,17 +64,14 @@ public class BoardService {
             String originalFilename = boardFile.getOriginalFilename();
             String storedFileName;
 
-            // =================================================================
-            // 현재 로컬 테스트용 파일 저장 로직 (활성화 상태)
-            // =================================================================
-//            storedFileName = System.currentTimeMillis() + "_" + originalFilename;
-//            String savePath = uploadPath + storedFileName;
-//            boardFile.transferTo(new File(savePath));
+            /*
+            // 기존 로컬 테스트용 파일 저장 로직
+            storedFileName = System.currentTimeMillis() + "_" + originalFilename;
+            String savePath = uploadPath + storedFileName;
+            boardFile.transferTo(new File(savePath));
+            */
 
-            // =================================================================
-            // [배포 시 주석 해제] AWS S3 파일 업로드 로직
-            //  위 '로컬 테스트용 파일 저장 로직'을 주석 처리하고,아래 코드의 주석을 해제하여 사용하세요.
-            // =================================================================
+            // AWS S3 파일 업로드 로직 활성화
             storedFileName = s3UploaderService.upload(boardFile, "images"); // "images"는 S3 버킷 안의 폴더명
 
             BoardFileEntity boardFileEntity = BoardFileEntity.toBoardFileEntity(savedEntity, originalFilename, storedFileName);
@@ -114,7 +109,19 @@ public class BoardService {
     public BoardDTO findById(Long id) {
         BoardEntity boardEntity = boardRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 없습니다. id=" + id));
-        return BoardDTO.toBoardDTO(boardEntity);
+
+        // Entity -> DTO 기본 변환
+        BoardDTO boardDTO = BoardDTO.toBoardDTO(boardEntity);
+
+        // 파일이 첨부된 경우, S3 Pre-signed URL을 생성하여 DTO에 설정
+        if (boardEntity.getFileAttached() == 1 && !boardEntity.getBoardFileEntityList().isEmpty()) {
+            // storedFileName은 S3에 저장된 파일의 키(key) 입니다.
+            String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
+            String fileUrl = s3UploaderService.generatePresignedUrl(storedFileName);
+            boardDTO.setFileUrl(fileUrl);
+        }
+
+        return boardDTO;
     }
 
     public void update(Long id, BoardDTO boardDTO, String userId) {
