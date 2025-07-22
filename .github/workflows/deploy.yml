@@ -4,7 +4,7 @@ on:
   push:
     branches: # 배포 기준이 되는 브랜치 
       - release
-      - feature/board-deploy
+      - feature/board-s3
 
 jobs:
   deploy:
