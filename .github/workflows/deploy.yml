@@ -1,5 +1,5 @@
 name: Deploy Backend to EC2
-# (재배포 커밋을 위한 아무 내용)
+# (재배포 커밋을 위한 아무거나)
 on:
   push:
     branches: # 배포 기준이 되는 브랜치 
