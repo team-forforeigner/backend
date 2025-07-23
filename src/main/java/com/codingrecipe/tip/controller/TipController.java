@@ -1,5 +1,7 @@
-package com.codingrecipe.tip;
+package com.codingrecipe.tip.controller;
 
+import com.codingrecipe.tip.TipCategory;
+import com.codingrecipe.tip.TipDTO;
 import com.codingrecipe.tip.service.TipImportService;
 import com.codingrecipe.tip.service.TipService;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -25,7 +27,7 @@ public class TipController {
     private final ObjectMapper objectMapper;
 
     @GetMapping("/api/tips")
-    public Page<TipDTO> getTipsByCategory(@RequestParam(required = false)TipCategory category, Pageable pageable) {
+    public Page<TipDTO> getTipsByCategory(@RequestParam(required = false) TipCategory category, Pageable pageable) {
         if (category != null) {
             return tipService.findByCategory(category, pageable);
         }

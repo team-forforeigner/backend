@@ -1,12 +1,14 @@
 package com.codingrecipe.tip.service;
 
 import com.codingrecipe.tip.TipCategory;
+import com.codingrecipe.tip.TipDTO;
 import com.codingrecipe.tip.TipEntity;
 import com.codingrecipe.tip.repository.TipRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
 
 @Service
 @RequiredArgsConstructor
@@ -28,5 +30,15 @@ public class TipServiceImpl implements TipService {
     @Override
     public TipEntity saveTip(TipEntity tip) {
         return tipRepository.save(tip);
+    }
+
+    @Override
+    public Page<TipDTO> findByCategory(TipCategory category, Pageable pageable) {
+        return null;
+    }
+
+    @Override
+    public Page<TipDTO> findAll(Pageable pageable) {
+        return null;
     }
 }

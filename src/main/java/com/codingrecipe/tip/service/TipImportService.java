@@ -29,7 +29,7 @@ public class TipImportService {
                         .question(dto.getQuestion())
                         .answer(dto.getAnswer())
                         .source(dto.getSource())
-                        .category(dto.getCategory())
+                        .categories(dto.getCategories()) // 복수 카테고리
                         .build())
                 .collect(Collectors.toList());
 
