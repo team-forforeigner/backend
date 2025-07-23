@@ -5,14 +5,12 @@ import lombok.Getter;
 
 @Getter
 public class UserInfoDto {
-    private String name;
+    private String nickname; // 변경: name -> nickname
     private String email;
-    private String userId;
 
-    // Member 엔티티를 받아서 DTO를 생성하는 생성자
     public UserInfoDto(Member member) {
-        this.name = member.getName();
+        // 변경: getName() -> getNickname()
+        this.nickname = member.getNickname();
         this.email = member.getEmail();
-        this.userId = member.getUserId();
     }
 }

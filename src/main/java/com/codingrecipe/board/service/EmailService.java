@@ -29,9 +29,12 @@ public class EmailService {
     private static final String VERIFICATION_SUBJECT = "[ForForeigner] 이메일 인증을 완료해주세요.";
 
     public void sendVerificationEmail(Member member) {
-        String token = jwtUtil.generateToken(member.getUserId());
+        // 변경: 토큰 생성 시 userId 대신 email 사용
+        String token = jwtUtil.generateToken(member.getEmail());
         String verificationLink = baseUrl + "?token=" + token;
-        String htmlContent = generateEmailTemplate(verificationLink, member.getName());
+
+        // 변경: 템플릿에 username 대신 nickname 사용
+        String htmlContent = generateEmailTemplate(verificationLink, member.getNickname());
         sendEmail(member.getEmail(), VERIFICATION_SUBJECT, htmlContent);
     }
 

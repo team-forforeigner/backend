@@ -7,22 +7,19 @@ import com.codingrecipe.board.entity.BoardFileEntity;
 import com.codingrecipe.board.entity.BoardLikeEntity;
 import com.codingrecipe.board.entity.CategoryEntity;
 import com.codingrecipe.board.repository.*;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class BoardService {
 
@@ -31,16 +28,23 @@ public class BoardService {
     private final BoardFileRepository boardFileRepository;
     private final CategoryRepository categoryRepository;
     private final BoardLikeRepository boardLikeRepository;
-    private final S3UploaderService s3UploaderService; // S3 서비스 활성화
+    private final S3UploaderService s3UploaderService;
 
-    // 로컬 파일 저장 경로
-    // @Value("${file-upload-path}")
-    // private String uploadPath;
+    @Autowired
+    public BoardService(BoardRepository boardRepository, MemberRepository memberRepository, BoardFileRepository boardFileRepository, CategoryRepository categoryRepository, BoardLikeRepository boardLikeRepository, @Autowired(required = false) S3UploaderService s3UploaderService) {
+        this.boardRepository = boardRepository;
+        this.memberRepository = memberRepository;
+        this.boardFileRepository = boardFileRepository;
+        this.categoryRepository = categoryRepository;
+        this.boardLikeRepository = boardLikeRepository;
+        this.s3UploaderService = s3UploaderService;
+    }
 
     @Transactional
-    public Long save(BoardDTO boardDTO, String userId) throws IOException {
-        Member writer = memberRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+    public Long save(BoardDTO boardDTO, String email) throws IOException { // 변경: userId -> email
+        // 변경: findByUserId -> findByEmail
+        Member writer = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + email));
 
         CategoryEntity category = categoryRepository.findById(boardDTO.getCategoryId())
                 .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다: " + boardDTO.getCategoryId()));
@@ -61,21 +65,14 @@ public class BoardService {
             boardEntity.setFileAttached(1);
             BoardEntity savedEntity = boardRepository.save(boardEntity);
 
-            String originalFilename = boardFile.getOriginalFilename();
-            String storedFileName;
-
-            /*
-            // 기존 로컬 테스트용 파일 저장 로직
-            storedFileName = System.currentTimeMillis() + "_" + originalFilename;
-            String savePath = uploadPath + storedFileName;
-            boardFile.transferTo(new File(savePath));
-            */
-
-            // AWS S3 파일 업로드 로직 활성화
-            storedFileName = s3UploaderService.upload(boardFile, "images"); // "images"는 S3 버킷 안의 폴더명
-
-            BoardFileEntity boardFileEntity = BoardFileEntity.toBoardFileEntity(savedEntity, originalFilename, storedFileName);
-            boardFileRepository.save(boardFileEntity);
+            if (s3UploaderService != null) {
+                String originalFilename = boardFile.getOriginalFilename();
+                String storedFileName = s3UploaderService.upload(boardFile, "images");
+                BoardFileEntity boardFileEntity = BoardFileEntity.toBoardFileEntity(savedEntity, originalFilename, storedFileName);
+                boardFileRepository.save(boardFileEntity);
+            } else {
+                System.out.println("S3 Uploader가 없어 파일 저장을 건너뜁니다. (local profile)");
+            }
 
             return savedEntity.getId();
         }
@@ -94,41 +91,37 @@ public class BoardService {
     }
 
     @Transactional(readOnly = true)
-    public Page<BoardDTO> pagingByWriter(String userId, Pageable pageable) {
-        Page<BoardEntity> boardEntities = boardRepository.findByWriter_UserId(userId, pageable);
+    public Page<BoardDTO> pagingByWriter(String email, Pageable pageable) { // 변경: userId -> email
+        // 참고: BoardRepository에 findByWriter_Email 메소드가 필요합니다.
+        Page<BoardEntity> boardEntities = boardRepository.findByWriter_Email(email, pageable);
         return boardEntities.map(this::convertToDto);
     }
 
     @Transactional(readOnly = true)
     public List<BoardDTO> findTop3ByLikes() {
         List<BoardEntity> boardEntityList = boardRepository.findTop3ByOrderByBoardLikesDesc();
-        return boardEntityList.stream().map(BoardDTO::toBoardDTO).collect(Collectors.toList());
+        return boardEntityList.stream().map(this::convertToDto).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public BoardDTO findById(Long id) {
         BoardEntity boardEntity = boardRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 없습니다. id=" + id));
-
-        // Entity -> DTO 기본 변환
-        BoardDTO boardDTO = BoardDTO.toBoardDTO(boardEntity);
-
-        // 파일이 첨부된 경우, S3 Pre-signed URL을 생성하여 DTO에 설정
-        if (boardEntity.getFileAttached() == 1 && !boardEntity.getBoardFileEntityList().isEmpty()) {
-            // storedFileName은 S3에 저장된 파일의 키(key) 입니다.
+        BoardDTO boardDTO = convertToDto(boardEntity);
+        if (s3UploaderService != null && boardEntity.getFileAttached() == 1 && !boardEntity.getBoardFileEntityList().isEmpty()) {
             String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
             String fileUrl = s3UploaderService.generatePresignedUrl(storedFileName);
             boardDTO.setFileUrl(fileUrl);
         }
-
         return boardDTO;
     }
 
-    public void update(Long id, BoardDTO boardDTO, String userId) {
+    public void update(Long id, BoardDTO boardDTO, String email) { // 변경: userId -> email
         BoardEntity boardEntity = boardRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 없습니다. id=" + id));
 
-        if (boardEntity.getWriter() == null || !boardEntity.getWriter().getUserId().equals(userId)) {
+        // 변경: getUserId() -> getEmail()
+        if (boardEntity.getWriter() == null || !boardEntity.getWriter().getEmail().equals(email)) {
             throw new IllegalStateException("수정 권한이 없습니다.");
         }
 
@@ -142,11 +135,12 @@ public class BoardService {
         boardEntity.setBoardContents(boardDTO.getBoardContents());
     }
 
-    public void delete(Long boardId, String userId) {
+    public void delete(Long boardId, String email) { // 변경: userId -> email
         BoardEntity boardEntity = boardRepository.findById(boardId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
 
-        if (boardEntity.getWriter() == null || !boardEntity.getWriter().getUserId().equals(userId)) {
+        // 변경: getUserId() -> getEmail()
+        if (boardEntity.getWriter() == null || !boardEntity.getWriter().getEmail().equals(email)) {
             throw new IllegalStateException("삭제 권한이 없습니다.");
         }
         boardRepository.delete(boardEntity);
@@ -169,8 +163,9 @@ public class BoardService {
         return boardEntities.map(this::convertToDto);
     }
 
-    public boolean toggleLike(Long boardId, String userId) {
-        Member member = memberRepository.findByUserId(userId)
+    public boolean toggleLike(Long boardId, String email) { // 변경: userId -> email
+        // 변경: findByUserId -> findByEmail
+        Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         BoardEntity board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
@@ -192,22 +187,21 @@ public class BoardService {
     }
 
     @Transactional(readOnly = true)
-    public List<BoardDTO> getMyLikedPosts(String userId) {
-        Member member = memberRepository.findByUserId(userId)
+    public List<BoardDTO> getMyLikedPosts(String email) { // 변경: userId -> email
+        // 변경: findByUserId -> findByEmail
+        Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-
         List<BoardLikeEntity> likes = boardLikeRepository.findAllByMember(member);
-
         return likes.stream()
-                .map(like -> BoardDTO.toBoardDTO(like.getBoard()))
+                .map(like -> convertToDto(like.getBoard()))
                 .collect(Collectors.toList());
     }
 
-    // DTO 변환을 담당하는 별도 메소드 (코드 중복 제거)
     private BoardDTO convertToDto(BoardEntity board) {
         return new BoardDTO(
                 board.getId(),
-                board.getWriter() != null ? board.getWriter().getName() : "탈퇴한 사용자",
+                // 변경: getName() -> getNickname()
+                board.getWriter() != null ? board.getWriter().getNickname() : "탈퇴한 사용자",
                 board.getBoardTitle(),
                 board.getBoardHits(),
                 board.getBoardLikes(),

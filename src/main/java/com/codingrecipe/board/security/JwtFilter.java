@@ -31,17 +31,9 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-
-        // ========================= [디버깅 로그] 1. 필터 시작 =========================
-        log.info(">>> JWT 필터 시작: URI: {}", request.getRequestURI());
-
         final String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        // ========================= [디버깅 로그] 2. 헤더 확인 =========================
-        log.info("Authorization 헤더: {}", authorization);
-
         if (authorization == null || !authorization.startsWith("Bearer ")) {
-            log.warn("Authorization 헤더가 없거나 'Bearer '로 시작하지 않습니다. 필터를 종료합니다.");
             filterChain.doFilter(request, response);
             return;
         }
@@ -49,8 +41,6 @@ public class JwtFilter extends OncePerRequestFilter {
         String token;
         try {
             token = authorization.split(" ")[1];
-            // ========================= [디버깅 로그] 3. 토큰 추출 =========================
-            log.info("추출된 토큰: {}", token);
         } catch (Exception e) {
             log.error("토큰 추출 중 오류 발생", e);
             filterChain.doFilter(request, response);
@@ -64,29 +54,20 @@ public class JwtFilter extends OncePerRequestFilter {
                 return;
             }
 
-            String userId = jwtUtil.getUserId(token);
-            // ========================= [디버깅 로그] 4. 토큰에서 UserId 추출 =========================
-            log.info("토큰에서 추출한 userId: {}", userId);
+            // 변경: getUserId() -> getEmail()
+            String email = jwtUtil.getEmail(token);
 
-            if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                // ========================= [디버깅 로그] 5. DB에서 사용자 정보 조회 =========================
-                log.info("DB에서 사용자 [{}] 조회를 시작합니다.", userId);
-                Optional<Member> memberOpt = memberRepository.findByUserId(userId);
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                // 변경: findByUserId() -> findByEmail()
+                Optional<Member> memberOpt = memberRepository.findByEmail(email);
 
                 if (memberOpt.isPresent()) {
                     Member member = memberOpt.get();
-                    // ========================= [디버깅 로그] 6. 사용자 정보 조회 성공 =========================
-                    log.info("사용자 [{}] 정보 조회 성공! 역할: {}", userId, member.getRoleKey());
-
+                    // 변경: Principal을 email로 설정
                     UsernamePasswordAuthenticationToken authenticationToken =
-                            new UsernamePasswordAuthenticationToken(member.getUserId(), null, Collections.singletonList(new SimpleGrantedAuthority(member.getRoleKey())));
+                            new UsernamePasswordAuthenticationToken(member.getEmail(), null, Collections.singletonList(new SimpleGrantedAuthority(member.getRoleKey())));
                     authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-                    // ========================= [디버깅 로그] 7. 인증 성공 =========================
-                    log.info(">>> 사용자 [{}] 인증 성공! SecurityContext에 저장되었습니다.", userId);
-                } else {
-                    // ========================= [디버깅 로그] 6-1. 사용자 정보 조회 실패 =========================
-                    log.error("DB에 사용자 [{}] 정보가 없습니다.", userId);
                 }
             }
 
@@ -97,6 +78,5 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
-        log.info(">>> JWT 필터 종료: URI: {}", request.getRequestURI());
     }
 }

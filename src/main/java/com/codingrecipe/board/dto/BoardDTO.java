@@ -24,13 +24,11 @@ public class BoardDTO {
     private MultipartFile boardFile;
     private String originalFileName;
     private String storedFileName;
-    private String fileUrl; // [추가] Pre-signed URL을 담을 필드
+    private String fileUrl;
 
-    // 카테고리 정보 필드
     private Long categoryId;
     private String categoryName;
 
-    // 목록 조회를 위한 생성자
     public BoardDTO(Long id, String boardWriter, String boardTitle, int boardHits, int boardLikes, LocalDateTime boardCreatedTime, String categoryName) {
         this.id = id;
         this.boardWriter = boardWriter;
@@ -46,7 +44,10 @@ public class BoardDTO {
         boardDTO.setId(boardEntity.getId());
 
         if (boardEntity.getWriter() != null) {
-            boardDTO.setBoardWriter(boardEntity.getWriter().getName());
+            // 변경: getName() -> getNickname()
+            boardDTO.setBoardWriter(boardEntity.getWriter().getNickname());
+        } else {
+            boardDTO.setBoardWriter("탈퇴한 사용자");
         }
 
         boardDTO.setBoardTitle(boardEntity.getBoardTitle());
@@ -57,7 +58,6 @@ public class BoardDTO {
         boardDTO.setBoardUpdatedTime(boardEntity.getUpdatedTime());
         boardDTO.setFileAttached(boardEntity.getFileAttached());
 
-        // 카테고리 정보 매핑
         if (boardEntity.getCategory() != null) {
             boardDTO.setCategoryId(boardEntity.getCategory().getId());
             boardDTO.setCategoryName(boardEntity.getCategory().getName());

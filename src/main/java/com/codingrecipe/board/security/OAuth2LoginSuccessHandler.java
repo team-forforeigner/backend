@@ -1,7 +1,5 @@
 package com.codingrecipe.board.security;
 
-import com.codingrecipe.board.domain.Member;
-import com.codingrecipe.board.repository.MemberRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,21 +20,20 @@ import java.nio.charset.StandardCharsets;
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtUtil jwtUtil;
-    private final MemberRepository memberRepository;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         log.info("OAuth2 로그인 성공!");
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
-        String userId = oAuth2User.getName();
+        // Principal의 이름은 CustomOAuth2UserService에서 설정한 email이 됩니다.
+        String email = oAuth2User.getName();
 
-        Member member = memberRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("OAuth2 인증 정보에 해당하는 사용자가 없습니다."));
-
-        String token = jwtUtil.generateToken(member.getUserId());
+        // email을 사용하여 JWT 토큰 생성
+        String token = jwtUtil.generateToken(email);
         log.info("발급된 JWT 토큰: {}", token);
 
+        // 프론트엔드로 토큰을 전달하기 위한 리다이렉트 URL 생성
         String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/oauth-redirect")
                 .queryParam("token", token)
                 .build()

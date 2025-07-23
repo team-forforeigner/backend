@@ -4,7 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import lombok.extern.slf4j.Slf4j; // Slf4j import 추가
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,10 +24,7 @@ public class JwtUtil {
                    @Value("${jwt.expiration-ms:86400000}") long expirationMs) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMs = expirationMs;
-
-        // ★★★★★ 디버깅용 로그 추가 ★★★★★
-        log.info("JWT Secret Key가 성공적으로 로드되었습니다. Key Algorithm: {}, Key Length: {} bits",
-                secretKey.getAlgorithm(), secretKey.getEncoded().length * 8);
+        log.info("JWT Secret Key가 성공적으로 로드되었습니다.");
     }
 
     private Claims extractAllClaims(String token) {
@@ -43,7 +40,8 @@ public class JwtUtil {
         return claimsResolver.apply(claims);
     }
 
-    public String getUserId(String token) {
+    // 변경: getUserId -> getEmail
+    public String getEmail(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
@@ -51,17 +49,19 @@ public class JwtUtil {
         return extractClaim(token, Claims::getExpiration).before(new Date());
     }
 
-    public String generateToken(String userId) {
+    // 변경: 파라미터 userId -> email
+    public String generateToken(String email) {
         return Jwts.builder()
-                .setSubject(userId)
+                .setSubject(email) // 변경: subject로 email 설정
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public boolean validateToken(String token, String userId) {
-        final String extractedUserId = getUserId(token);
-        return (extractedUserId.equals(userId) && !isTokenExpired(token));
+    // 변경: 파라미터 userId -> email
+    public boolean validateToken(String token, String email) {
+        final String extractedEmail = getEmail(token); // 변경
+        return (extractedEmail.equals(email) && !isTokenExpired(token)); // 변경
     }
 }

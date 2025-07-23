@@ -15,7 +15,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "member") // ⭐️ 테이블 이름을 명시적으로 지정하는 것이 좋습니다.
+@Table(name = "member")
 public class Member {
 
     @Id
@@ -23,26 +23,24 @@ public class Member {
     private Long id;
 
     @Column(nullable = false)
-    private String name; // 소셜 로그인의 이름과 자체 가입의 이름을 공통으로 사용
+    private String nickname; // 변경: 'name' -> 'nickname', 초기값은 이메일, 이후 사용자가 변경
 
     @Column(nullable = false, unique = true)
-    private String email;
+    private String email; // 회원 식별 및 로그인을 위한 주요 키
 
     private String picture;
 
     @Column(unique = true)
-    private String userId;
+    private String userId; // 삭제
 
     private String password;
 
-    private String lastName;
-    private String firstName;
+    // private String lastName;  // 삭제
+    // private String firstName; // 삭제
 
     @Builder.Default
     @Column(nullable = false)
     private boolean emailVerified = false;
-
-    // private String emailAuthCode; // ⭐️ 더 이상 필요 없으므로 삭제 또는 주석 처리
 
     private String nationality;
     private LocalDate birth;
@@ -58,8 +56,9 @@ public class Member {
     @Column(nullable = false)
     private Role role;
 
-    public Member update(String name, String picture) {
-        this.name = name;
+    // 변경: 소셜 로그인 시 닉네임, 사진 업데이트
+    public Member update(String nickname, String picture) {
+        this.nickname = nickname;
         this.picture = picture;
         return this;
     }

@@ -3,11 +3,9 @@ package com.codingrecipe.board.dto;
 import lombok.Getter;
 import lombok.Setter;
 
-// 비밀번호 재설정(찾기) API 요청 시, 본인 확인을 위해 아이디, 이름, 이메일을 담아 보내는 DTO
+// 비밀번호 재설정(임시 비밀번호 발급) 요청 시, 이메일만 담아 보내는 DTO (수정됨)
 @Getter
 @Setter
 public class ResetPasswordRequestDto {
-    private String userId;
-    private String name;
     private String email;
 }

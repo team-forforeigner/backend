@@ -146,5 +146,4 @@ public class BoardController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
-
 }
