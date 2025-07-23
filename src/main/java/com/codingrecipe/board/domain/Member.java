@@ -35,9 +35,6 @@ public class Member {
 
     private String password;
 
-    // private String lastName;  // 삭제
-    // private String firstName; // 삭제
-
     @Builder.Default
     @Column(nullable = false)
     private boolean emailVerified = false;
