@@ -45,10 +45,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                        "/api/auth/**", "/login/oauth2/**", "/oauth-redirect",
-                        "/api/auth/signup" // [임의로 추가!]
-                ).permitAll()
+                .requestMatchers("/api/auth/**", "/login/oauth2/**", "/oauth-redirect").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/boards", "/api/boards/**").permitAll()
                 .anyRequest().authenticated());
 
