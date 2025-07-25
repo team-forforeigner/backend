@@ -1,20 +1,16 @@
 package com.codingrecipe.tip.controller;
 
-import com.codingrecipe.tip.TipCategory;
-import com.codingrecipe.tip.TipDTO;
-import com.codingrecipe.tip.service.TipImportService;
+import com.codingrecipe.tip.dto.TipDTO;
 import com.codingrecipe.tip.service.TipService;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -23,38 +19,25 @@ import java.util.List;
 public class TipController {
 
     private final TipService tipService;
-    private final TipImportService tipImportService;
-    private final ObjectMapper objectMapper;
 
-    @GetMapping("/api/tips")
-    public Page<TipDTO> getTipsByCategory(@RequestParam(required = false) TipCategory category, Pageable pageable) {
-        if (category != null) {
-            return tipService.findByCategory(category, pageable);
-        }
-        return tipService.findAll(pageable);
+    // 설명 : 팁 리스트 조회 (Page 적용)
+    @GetMapping
+    public ResponseEntity<Page<TipDTO>> getTips(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        Page<TipDTO> tipPage = tipService.getTips(pageable);
+        return ResponseEntity.ok(tipPage);
     }
 
-    // 설명 : JSON 파일로부터 여러 Tip을 한 번에 DB에 저장한다.
-    @PostMapping("/upload")
-    public ResponseEntity<String> importTips(@RequestParam("file") MultipartFile file) {
-        if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("파일이 비어 있습니다.");
-        }
-
-        try {
-            List<TipDTO> tipList = objectMapper.readValue(
-                    file.getInputStream(),
-                    new TypeReference<List<TipDTO>>() {}
-            );
-
-            tipImportService.importFromJson(tipList);
-
-            return ResponseEntity.ok("성공적으로 저장되었습니다. 저장된 팁 개수: " + tipList.size());
-        } catch (IOException e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("파일 처리 중 오류가 발생했습니다.");
-        }
+    // 설명 : JSON 배열로 받아서 DB 저장
+    @PostMapping("/import")
+    public ResponseEntity<String> importFromJson(@RequestBody List<TipDTO> tipList) {
+        tipService.importFromJson(tipList);
+        return ResponseEntity.status(HttpStatus.CREATED).body("팁이 성공적으로 저장되었습니다.");
     }
+
 }
 
 

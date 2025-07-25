@@ -1,17 +1,14 @@
 package com.codingrecipe.tip.service;
 
-import com.codingrecipe.tip.TipCategory;
-import com.codingrecipe.tip.TipDTO;
-import com.codingrecipe.tip.TipEntity;
+import com.codingrecipe.tip.dto.TipDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
+
 public interface TipService {
 
-    Page<TipEntity> getTips(Pageable pageable);
-    Page<TipEntity> getTipsByCategory(TipCategory category, Pageable pageable);
-    TipEntity saveTip(TipEntity tip);
-    Page<TipDTO> findByCategory(TipCategory category, Pageable pageable);
+    Page<TipDTO> getTips(Pageable pageable);
+    void importFromJson(List<TipDTO> tipList);
 
-    Page<TipDTO> findAll(Pageable pageable);
 }

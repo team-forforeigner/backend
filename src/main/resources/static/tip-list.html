@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>팁 리스트</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 2rem auto; }
+        button { margin-bottom: 10px; padding: 0.5rem 1rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+    </style>
+</head>
+<body>
+
+<h1>저장된 팁 리스트</h1>
+<button onclick="loadTips()">리스트 불러오기</button>
+
+<table>
+    <thead>
+    <tr>
+        <th>질문</th>
+        <th>답변</th>
+        <th>출처</th>
+        <th>카테고리</th>
+    </tr>
+    </thead>
+    <tbody id="tipsTableBody">
+    </tbody>
+</table>
+
+<script>
+    async function loadTips(page=0, size=10) {
+      const res = await fetch(`/api/tips?page=${page}&size=${size}`);
+      if (!res.ok) {
+        alert('팁 목록 불러오기 실패');
+        return;
+      }
+      const data = await res.json();
+      const tbody = document.getElementById('tipsTableBody');
+      tbody.innerHTML = '';
+
+      data.content.forEach(tip => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${tip.question}</td>
+          <td>${tip.answer}</td>
+          <td>${tip.source}</td>
+          <td>${tip.category}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // 페이지 로드 시 목록 자동 불러오기
+    window.onload = () => loadTips();
+</script>
+
+</body>
+</html>

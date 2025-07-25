@@ -8,11 +8,9 @@ public enum TipCategory {
     LANGUAGE, // 언어
     LAW, // 법률
     MONEY, // 금융
-    TECH, // 기술
     TRAVEL, // 여행
     ETIQUETTE, // 예절
-    SUPPORT, // 응급상황 및 지원
-    K_CULTURE, // K-문화
+    SUPPORT, // 지원
     ETC // 기타
 }
 
