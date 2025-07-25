@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController // 변경: HTML 뷰가 아닌 데이터(JSON)를 반환하는 API 컨트롤러임을 명시
 @RequiredArgsConstructor
-@RequestMapping("/comment")
+@RequestMapping("/api/comment")
 public class CommentController {
     private final CommentService commentService;
 
