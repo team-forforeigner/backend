@@ -2,6 +2,7 @@ package com.codingrecipe.tip.dto;
 
 import com.codingrecipe.tip.TipCategory;
 import com.codingrecipe.tip.entity.TipEntity;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 @Getter
@@ -12,9 +13,16 @@ import lombok.*;
 public class TipDTO {
 
     private Long id;
+
+    @NotBlank(message = "질문은 필수 입력입니다.")
     private String question;
+
+    @NotBlank(message = "답변은 필수 입력입니다.")
     private String answer;
+
     private String source;
+
+    @NotBlank(message = "카테고리는 필수 입력입니다.")
     private TipCategory category;
 
     // TipEntity -> TipDTO 변환

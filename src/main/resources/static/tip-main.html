@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>생활 팁</title>
+    <style>
+        body {
+          font-family: Arial, sans-serif;
+          padding: 20px;
+        }
+
+        .category-buttons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-bottom: 20px;
+        }
+
+        .category-buttons button {
+          padding: 8px 14px;
+          border: none;
+          background-color: #ddd;
+          cursor: pointer;
+          border-radius: 5px;
+          transition: background-color 0.2s;
+        }
+
+        .category-buttons button.active,
+        .category-buttons button:hover {
+          background-color: #007bff;
+          color: white;
+        }
+
+        .tip-list {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+        }
+
+        .tip-card {
+          border: 1px solid #ccc;
+          padding: 15px;
+          border-radius: 8px;
+          background-color: #f9f9f9;
+        }
+
+        .tip-question {
+          font-weight: bold;
+          margin-bottom: 8px;
+        }
+
+        .tip-answer {
+          color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<h1>생활 팁 모음</h1>
+
+<div class="category-buttons">
+    <button data-category="ALL" class="active">전체</button>
+    <button data-category="LIVING">생활</button>
+    <button data-category="CULTURE">문화</button>
+    <button data-category="LANGUAGE">언어</button>
+    <button data-category="LAW">법률</button>
+    <button data-category="MONEY">금융</button>
+    <button data-category="TRAVEL">여행</button>
+    <button data-category="ETIQUETTE">예절</button>
+    <button data-category="SUPPORT">지원</button>
+    <button data-category="ETC">기타</button>
+</div>
+
+<div class="tip-list" id="tipList">
+    <!-- 팁 카드가 여기에 렌더링됩니다 -->
+</div>
+
+<script>
+    const tipListEl = document.getElementById('tipList');
+    const categoryButtons = document.querySelectorAll('.category-buttons button');
+
+    function fetchTips(category) {
+      let url = '/api/tips';
+      if (category !== 'ALL') {
+        url += `?category=${category}`;
+      }
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          renderTips(data.content || []);
+        })
+        .catch(err => {
+          console.error('팁 불러오기 실패:', err);
+          tipListEl.innerHTML = '<p>팁을 불러오는 데 실패했습니다.</p>';
+        });
+    }
+
+    function renderTips(tips) {
+  tipListEl.innerHTML = tips.map(tip => `
+    <div class="tip-card">
+      <div class="tip-question">${tip.question}</div>
+      <div class="tip-answer">${tip.answer}</div>
+      ${tip.source ? `<div style="font-size: 0.8rem; color: gray; margin-top: 4px;">출처: ${tip.source}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+    categoryButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        categoryButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+
+        const selectedCategory = button.dataset.category;
+        fetchTips(selectedCategory);
+      });
+    });
+
+    // 기본 ALL 카테고리 로딩
+    fetchTips('ALL');
+</script>
+
+</body>
+</html>

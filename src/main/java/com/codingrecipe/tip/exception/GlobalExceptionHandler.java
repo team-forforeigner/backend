@@ -12,7 +12,20 @@ public class GlobalExceptionHandler {
 
     // 409 Conflict 상태 코드를 반환
     @ExceptionHandler(TipAlreadyExistsException.class)
-    public ResponseEntity<String> handlewTipAlreadyExistsException(TipAlreadyExistsException ex) {
+    public ResponseEntity<String> handleTipAlreadyExistsException(TipAlreadyExistsException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
     }
+
+    // 404 Not Found 상태 코드를 반환
+    @ExceptionHandler(TipNotFoundException.class)
+    public ResponseEntity<String> handleTipNotFoundException(TipNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+    }
+
+    // 400 Bad Request 상태 코드를 반환
+    @ExceptionHandler(InvalidCategoryException.class)
+    public ResponseEntity<String> handleInvalidCategoryException(InvalidCategoryException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+    }
+
 }
