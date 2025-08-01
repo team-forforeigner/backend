@@ -1,8 +1,12 @@
 package com.codingrecipe.tip.controller;
 
 import com.codingrecipe.tip.TipCategory;
-import com.codingrecipe.tip.dto.TipDTO;
+import com.codingrecipe.tip.dto.TipCreateRequest;
+import com.codingrecipe.tip.dto.TipResponse;
+import com.codingrecipe.tip.dto.TipImportResult;
+import com.codingrecipe.tip.dto.TipUpdateRequest;
 import com.codingrecipe.tip.exception.InvalidCategoryException;
+import com.codingrecipe.tip.exception.TipAlreadyExistsException;
 import com.codingrecipe.tip.service.TipService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,13 +29,13 @@ public class TipController {
     // 설명 : 팁 리스트 조회 (Page 적용)
     // 카테고리별로 조회 가능, 기본값은 ALL
     @GetMapping
-    public ResponseEntity<Page<TipDTO>> getTips(
+    public ResponseEntity<Page<TipResponse>> getTips(
             @RequestParam(required = false, defaultValue = "ALL") String category,
             @RequestParam(required = false, defaultValue = "0") int page,
             @RequestParam(required = false, defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<TipDTO> tips;
+        Page<TipResponse> tips;
         TipCategory tipCategory = TipCategory.valueOf(category.toUpperCase()); // String -> Enum 변환
 
         try {
@@ -46,10 +50,25 @@ public class TipController {
         }
     }
 
-    // 설명 : 팁 업데이트
+    // 설명 : 팁 저장 (단일)
+    @PostMapping
+    public ResponseEntity<?> saveTip(@RequestBody @Valid TipCreateRequest dto) {
+        try {
+            Long id = tipService.createTip(dto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(id);
+        } catch (TipAlreadyExistsException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 등록된 질문입니다.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("유효하지 않은 데이터입니다.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 오류");
+        }
+    }
+
+    // 설명 : 팁 수정
     @PutMapping("/{id}")
-    public ResponseEntity<Void> updateTip(@PathVariable Long id, @RequestBody TipDTO dto) {
-        tipService.updateTip(id, dto);
+    public ResponseEntity<Void> updateTip(@PathVariable Long id, @RequestBody TipUpdateRequest dto) {
+        tipService.updateTip(dto);
         return ResponseEntity.ok().build();
     }
 
@@ -62,9 +81,9 @@ public class TipController {
 
     // 설명 : JSON 배열로 받아서 DB 저장
     @PostMapping("/import")
-    public ResponseEntity<String> importFromJson(@RequestBody @Valid List<TipDTO> tipList) {
-        tipService.importFromJson(tipList);
-        return ResponseEntity.status(HttpStatus.CREATED).body("팁이 성공적으로 저장되었습니다.");
+    public ResponseEntity<TipImportResult> importFromJson(@RequestBody @Valid List<TipCreateRequest> tipList) {
+        TipImportResult result = tipService.importFromJson(tipList);
+        return ResponseEntity.ok(result);
     }
 
 }

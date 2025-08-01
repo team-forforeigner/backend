@@ -2,7 +2,7 @@ package com.codingrecipe.tip.dto;
 
 import com.codingrecipe.tip.TipCategory;
 import com.codingrecipe.tip.entity.TipEntity;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Getter
@@ -10,22 +10,19 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class TipDTO {
+public class TipResponse {
 
+    @NotNull
     private Long id;
-
-    @NotBlank(message = "질문은 필수 입력입니다.")
+    @NotNull
     private String question;
-
-    @NotBlank(message = "답변은 필수 입력입니다.")
+    @NotNull
     private String answer;
-
-    private String source;
-
-    @NotBlank(message = "카테고리는 필수 입력입니다.")
+    private String source;  // 선택
+    @NotNull
     private TipCategory category;
 
-    // TipEntity -> TipDTO 변환
+    // DTO -> Entity 변환
     public TipEntity toEntity() {
         return TipEntity.builder()
                 .id(this.id)
@@ -36,9 +33,9 @@ public class TipDTO {
                 .build();
     }
 
-    // TipDTO -> TipEntity 변환
-    public static TipDTO fromEntity(TipEntity entity) {
-        return TipDTO.builder()
+    // Entity -> DTO 변환
+    public static TipResponse fromEntity(TipEntity entity) {
+        return TipResponse.builder()
                 .id(entity.getId())
                 .question(entity.getQuestion())
                 .answer(entity.getAnswer())
