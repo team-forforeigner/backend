@@ -1,7 +1,7 @@
 package com.codingrecipe.board.service;
 
 import com.codingrecipe.board.dto.ReportDTO;
-import com.codingrecipe.board.entity.ReportEntity;
+import com.codingrecipe.board.domain.ReportEntity;
 import com.codingrecipe.board.repository.ReportRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
