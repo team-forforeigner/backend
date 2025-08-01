@@ -62,6 +62,8 @@ dependencies {
 
 	// 5. [배포 시 필요] AWS S3 라이브러리
 	implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
+	implementation platform('software.amazon.awssdk:bom:2.25.58')
+	implementation 'software.amazon.awssdk:s3'
 }
 
 tasks.named('test') {
