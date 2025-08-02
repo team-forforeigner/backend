@@ -15,6 +15,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
 * 설명 : TipService 인터페이스를 구현한 서비스입니다.
@@ -39,8 +40,8 @@ public class TipServiceImpl implements TipService {
         String source = StringUtils.hasText(dto.getSource()) ? dto.getSource() : null;
 
         TipEntity entity = dto.toEntity();
-        tipRepository.save(entity);
-        return entity.getId();
+        TipEntity saved = tipRepository.save(entity);
+        return saved.getId();
     }
 
     // 설명 : 팁 조회
@@ -60,24 +61,40 @@ public class TipServiceImpl implements TipService {
     // 설명 : 팁 업데이트
     @Override
     @Transactional
-    public void updateTip(TipUpdateRequest dto) {
+    public boolean updateTip(TipUpdateRequest dto) {
         TipEntity tip = tipRepository.findById(dto.getId())
                 .orElseThrow(() -> new TipNotFoundException(dto.getId()));
+        boolean changed = false;
 
-        // 질문이 변경됐을 때 중복 확인
-        if (!tip.getQuestion().equals(dto.getQuestion()) &&
-                tipRepository.existsByQuestion(dto.getQuestion())) {
-            throw new TipAlreadyExistsException("이미 등록된 질문입니다.");
+        // 질문이 완전히 바뀐 경우에만 중복 검사
+        if (!Objects.equals(tip.getQuestion(), dto.getQuestion())) {
+            if (tipRepository.existsByQuestion(dto.getQuestion())) {
+                throw new TipAlreadyExistsException("이미 등록된 질문입니다.");
+            }
+            tip.setQuestion(dto.getQuestion());
+            changed = true;
         }
-        if (!isValid(dto)) {
-            throw new IllegalArgumentException("유효하지 않은 데이터입니다.");
-        }
-        tip.setQuestion(dto.getQuestion());
-        tip.setAnswer(dto.getAnswer());
-        tip.setSource(dto.getSource());
-        tip.setCategory(dto.getCategory());
 
-        tipRepository.save(tip);
+        if (!Objects.equals(tip.getAnswer(), dto.getAnswer())) {
+            tip.setAnswer(dto.getAnswer());
+            changed = true;
+        }
+
+        if (!Objects.equals(tip.getSource(), dto.getSource())) {
+            tip.setSource(dto.getSource());
+            changed = true;
+        }
+
+        if (!Objects.equals(tip.getCategory(), dto.getCategory())) {
+            tip.setCategory(dto.getCategory());
+            changed = true;
+        }
+
+        if (changed) {
+            tipRepository.save(tip);
+        }
+
+        return changed; // 변경 여부 반환
     }
 
     // 설명 : 팁 삭제
@@ -91,10 +108,11 @@ public class TipServiceImpl implements TipService {
 
     // 설명 : JSON 배열로 받아서 DB 저장
     @Transactional
-    public TipImportResult importFromJson(List<TipCreateRequest> tipList) {
+    public String importFromJson(List<TipCreateRequest> tipList) {
         // 설명 : 정상적인 팁들은 저장하고, 중복된 팁들은 수집해서 한 번에 보고 한다.
         List<String> duplicatedQuestions = new ArrayList<>();
         List<TipEntity> validTips = new ArrayList<>();
+        String result;
 
         for (TipCreateRequest dto : tipList) {
             if (isDuplicated(dto.getQuestion())) {
@@ -111,7 +129,9 @@ public class TipServiceImpl implements TipService {
         if (!validTips.isEmpty()) {
             tipRepository.saveAll(validTips);
         }
-        return new TipImportResult(validTips.size(), duplicatedQuestions);
+        result = validTips.size() + "개의 팁이 저장되었습니다. 중복된 질문: " + duplicatedQuestions;
+
+        return result;
     }
 
     // 설명 : 질문 중복 확인

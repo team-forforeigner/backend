@@ -3,7 +3,6 @@ package com.codingrecipe.tip.service;
 import com.codingrecipe.tip.TipCategory;
 import com.codingrecipe.tip.dto.TipCreateRequest;
 import com.codingrecipe.tip.dto.TipResponse;
-import com.codingrecipe.tip.dto.TipImportResult;
 import com.codingrecipe.tip.dto.TipUpdateRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,12 +21,12 @@ public interface TipService {
     Page<TipResponse> getTipsByCategory(TipCategory category, Pageable pageable);
 
     // 설명 : 팁 업데이트
-    void updateTip(TipUpdateRequest dto);
+    boolean updateTip(TipUpdateRequest dto);
 
     // 설명 : 팁 삭제
     void deleteTip(Long id);
 
     // 설명 : JSON 배열로 받아서 DB 저장
-    TipImportResult importFromJson(List<TipCreateRequest> tipList);
+    String importFromJson(List<TipCreateRequest> tipList);
 
 }

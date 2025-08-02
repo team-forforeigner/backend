@@ -1,9 +1,9 @@
 package com.codingrecipe.tip.controller;
 
 import com.codingrecipe.tip.TipCategory;
+import com.codingrecipe.tip.dto.ApiResponse;
 import com.codingrecipe.tip.dto.TipCreateRequest;
 import com.codingrecipe.tip.dto.TipResponse;
-import com.codingrecipe.tip.dto.TipImportResult;
 import com.codingrecipe.tip.dto.TipUpdateRequest;
 import com.codingrecipe.tip.exception.InvalidCategoryException;
 import com.codingrecipe.tip.exception.TipAlreadyExistsException;
@@ -17,7 +17,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tips")
@@ -52,24 +54,37 @@ public class TipController {
 
     // 설명 : 팁 저장 (단일)
     @PostMapping
-    public ResponseEntity<?> saveTip(@RequestBody @Valid TipCreateRequest dto) {
+    public ResponseEntity<ApiResponse<?>> saveTip(@RequestBody @Valid TipCreateRequest dto) {
         try {
             Long id = tipService.createTip(dto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(id);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success(Map.of("id", id)));
+
         } catch (TipAlreadyExistsException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 등록된 질문입니다.");
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.failure("TIP_ALREADY_EXISTS", "이미 등록된 질문입니다."));
+
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("유효하지 않은 데이터입니다.");
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.failure("INVALID_DATA", "유효하지 않은 데이터입니다."));
+
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 오류");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.failure("SERVER_ERROR", "서버 오류"));
         }
     }
 
     // 설명 : 팁 수정
     @PutMapping("/{id}")
-    public ResponseEntity<Void> updateTip(@PathVariable Long id, @RequestBody TipUpdateRequest dto) {
-        tipService.updateTip(dto);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Map<String, Object>> updateTip(@PathVariable Long id, @RequestBody TipUpdateRequest dto) {
+        dto.setId(id); // 요청 경로에서 ID를 DTO에 설정
+        boolean changed = tipService.updateTip(dto);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("changed", changed);
+
+        return ResponseEntity.ok(response);
     }
 
     // 설명 : 팁 삭제
@@ -81,8 +96,8 @@ public class TipController {
 
     // 설명 : JSON 배열로 받아서 DB 저장
     @PostMapping("/import")
-    public ResponseEntity<TipImportResult> importFromJson(@RequestBody @Valid List<TipCreateRequest> tipList) {
-        TipImportResult result = tipService.importFromJson(tipList);
+    public ResponseEntity<String> importFromJson(@RequestBody @Valid List<TipCreateRequest> tipList) {
+        String result = tipService.importFromJson(tipList);
         return ResponseEntity.ok(result);
     }
 
