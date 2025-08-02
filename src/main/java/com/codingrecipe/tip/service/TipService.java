@@ -12,7 +12,7 @@ import java.util.List;
 public interface TipService {
 
     // 설명 : 팁 저장 (단일)
-    public Long createTip(TipCreateRequest dto);
+    Long createTip(TipCreateRequest dto);
 
     // 설명 : 팁 리스트 조회 (Page 적용)
     Page<TipResponse> getTips(Pageable pageable);

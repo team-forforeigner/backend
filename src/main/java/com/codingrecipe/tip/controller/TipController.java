@@ -8,6 +8,7 @@ import com.codingrecipe.tip.dto.TipUpdateRequest;
 import com.codingrecipe.tip.exception.InvalidCategoryException;
 import com.codingrecipe.tip.exception.TipAlreadyExistsException;
 import com.codingrecipe.tip.service.TipService;
+import com.codingrecipe.tip.service.TipServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,7 +27,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TipController {
 
-    private final TipService tipService;
+    private final TipServiceImpl tipServiceImpl;
 
     // 설명 : 팁 리스트 조회 (Page 적용)
     // 카테고리별로 조회 가능, 기본값은 ALL
@@ -42,9 +43,9 @@ public class TipController {
 
         try {
             if ("ALL".equalsIgnoreCase(category)) {
-                tips = tipService.getTips(pageable);
+                tips = tipServiceImpl.getTips(pageable);
             } else {
-                tips = tipService.getTipsByCategory(tipCategory, pageable);
+                tips = tipServiceImpl.getTipsByCategory(tipCategory, pageable);
             }
             return ResponseEntity.ok(tips);
         } catch (InvalidCategoryException e) {
@@ -56,7 +57,7 @@ public class TipController {
     @PostMapping
     public ResponseEntity<ApiResponse<?>> saveTip(@RequestBody @Valid TipCreateRequest dto) {
         try {
-            Long id = tipService.createTip(dto);
+            Long id = tipServiceImpl.createTip(dto);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success(Map.of("id", id)));
 
@@ -78,7 +79,7 @@ public class TipController {
     @PutMapping("/{id}")
     public ResponseEntity<Map<String, Object>> updateTip(@PathVariable Long id, @RequestBody TipUpdateRequest dto) {
         dto.setId(id); // 요청 경로에서 ID를 DTO에 설정
-        boolean changed = tipService.updateTip(dto);
+        boolean changed = tipServiceImpl.updateTip(dto);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -90,14 +91,14 @@ public class TipController {
     // 설명 : 팁 삭제
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTip(@PathVariable Long id) {
-        tipService.deleteTip(id);
+        tipServiceImpl.deleteTip(id);
         return ResponseEntity.noContent().build();
     }
 
     // 설명 : JSON 배열로 받아서 DB 저장
     @PostMapping("/import")
     public ResponseEntity<String> importFromJson(@RequestBody @Valid List<TipCreateRequest> tipList) {
-        String result = tipService.importFromJson(tipList);
+        String result = tipServiceImpl.importFromJson(tipList);
         return ResponseEntity.ok(result);
     }
 

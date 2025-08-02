@@ -6,6 +6,7 @@ import com.codingrecipe.tip.entity.TipEntity;
 import com.codingrecipe.tip.exception.TipAlreadyExistsException;
 import com.codingrecipe.tip.exception.TipNotFoundException;
 import com.codingrecipe.tip.repository.TipRepository;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,7 +30,7 @@ public class TipServiceImpl implements TipService {
 
     @Override
     @Transactional
-    public Long createTip(TipCreateRequest dto) {
+    public Long createTip(@NotNull TipCreateRequest dto) {
         if (tipRepository.existsByQuestion(dto.getQuestion())) {
             throw new TipAlreadyExistsException("이미 등록된 질문입니다.");
         }
@@ -38,6 +39,7 @@ public class TipServiceImpl implements TipService {
         }
 
         String source = StringUtils.hasText(dto.getSource()) ? dto.getSource() : null;
+        dto.setSource(source);
 
         TipEntity entity = dto.toEntity();
         TipEntity saved = tipRepository.save(entity);
@@ -61,12 +63,13 @@ public class TipServiceImpl implements TipService {
     // 설명 : 팁 업데이트
     @Override
     @Transactional
-    public boolean updateTip(TipUpdateRequest dto) {
+    public boolean updateTip(@NotNull TipUpdateRequest dto) {
         TipEntity tip = tipRepository.findById(dto.getId())
                 .orElseThrow(() -> new TipNotFoundException(dto.getId()));
+
         boolean changed = false;
 
-        // 질문이 완전히 바뀐 경우에만 중복 검사
+        // question: 중복 검사 포함
         if (!Objects.equals(tip.getQuestion(), dto.getQuestion())) {
             if (tipRepository.existsByQuestion(dto.getQuestion())) {
                 throw new TipAlreadyExistsException("이미 등록된 질문입니다.");
@@ -75,24 +78,12 @@ public class TipServiceImpl implements TipService {
             changed = true;
         }
 
-        if (!Objects.equals(tip.getAnswer(), dto.getAnswer())) {
-            tip.setAnswer(dto.getAnswer());
-            changed = true;
-        }
+        // 나머지 필드: 단순 비교 후 변경
+        if (!Objects.equals(tip.getAnswer(), dto.getAnswer())) { tip.setAnswer(dto.getAnswer()); changed = true; }
+        if (!Objects.equals(tip.getSource(), dto.getSource())) { tip.setSource(dto.getSource()); changed = true; }
+        if (!Objects.equals(tip.getCategory(), dto.getCategory())) { tip.setCategory(dto.getCategory()); changed = true; }
 
-        if (!Objects.equals(tip.getSource(), dto.getSource())) {
-            tip.setSource(dto.getSource());
-            changed = true;
-        }
-
-        if (!Objects.equals(tip.getCategory(), dto.getCategory())) {
-            tip.setCategory(dto.getCategory());
-            changed = true;
-        }
-
-        if (changed) {
-            tipRepository.save(tip);
-        }
+        if (changed) tipRepository.save(tip);
 
         return changed; // 변경 여부 반환
     }
@@ -120,7 +111,7 @@ public class TipServiceImpl implements TipService {
             } else {
                 if (isValid(dto)) {
                     String source = StringUtils.hasText(dto.getSource()) ? dto.getSource() : null;
-                    TipEntity entity = dto.toEntity();
+                    dto.setSource(source);
                     validTips.add(dto.toEntity());
                 }
             }
