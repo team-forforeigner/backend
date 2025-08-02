@@ -13,6 +13,10 @@ java {
 	}
 }
 
+springBoot {
+	mainClass = 'com.codingrecipe.board.BoardApplication'
+}
+
 // [배포 시 필요] AWS SDK 버전 관리를 위한 설정
 ext {
 	set('springCloudVersion', "3.1.0")
