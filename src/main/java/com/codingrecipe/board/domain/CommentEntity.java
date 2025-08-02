@@ -1,7 +1,6 @@
 package com.codingrecipe.board.domain;
 
 import com.codingrecipe.board.dto.CommentDTO;
-import jakarta.persistence.Id;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,21 +27,19 @@ public class CommentEntity extends BaseEntity {
     @JoinColumn(name = "board_id")
     private BoardEntity boardEntity;
 
-    // 부모 댓글을 가리키는 필드
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     private CommentEntity parent;
 
-    // 자식 댓글 목록을 가지는 필드
     @OneToMany(mappedBy = "parent", orphanRemoval = true, cascade = CascadeType.ALL)
     private List<CommentEntity> children = new ArrayList<>();
 
-
-    public static CommentEntity toSaveEntity(CommentDTO commentDTO, BoardEntity boardEntity) {
+    public static CommentEntity toSaveEntity(CommentDTO commentDTO, BoardEntity boardEntity, CommentEntity parentComment) {
         CommentEntity commentEntity = new CommentEntity();
         commentEntity.setCommentWriter(commentDTO.getCommentWriter());
         commentEntity.setCommentContents(commentDTO.getCommentContents());
         commentEntity.setBoardEntity(boardEntity);
+        commentEntity.setParent(parentComment);
         return commentEntity;
     }
 }

@@ -2,12 +2,13 @@ package com.codingrecipe.board.service;
 
 import com.codingrecipe.board.domain.Member;
 import com.codingrecipe.board.dto.BoardDTO;
+import com.codingrecipe.board.dto.LikeResponseDTO;
 import com.codingrecipe.board.domain.BoardEntity;
 import com.codingrecipe.board.domain.BoardFileEntity;
 import com.codingrecipe.board.domain.BoardLikeEntity;
 import com.codingrecipe.board.domain.CategoryEntity;
 import com.codingrecipe.board.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class BoardService {
 
     private final BoardRepository boardRepository;
@@ -28,17 +30,7 @@ public class BoardService {
     private final BoardFileRepository boardFileRepository;
     private final CategoryRepository categoryRepository;
     private final BoardLikeRepository boardLikeRepository;
-    private final S3UploaderService s3UploaderService;
-
-    @Autowired
-    public BoardService(BoardRepository boardRepository, MemberRepository memberRepository, BoardFileRepository boardFileRepository, CategoryRepository categoryRepository, BoardLikeRepository boardLikeRepository, @Autowired(required = false) S3UploaderService s3UploaderService) {
-        this.boardRepository = boardRepository;
-        this.memberRepository = memberRepository;
-        this.boardFileRepository = boardFileRepository;
-        this.categoryRepository = categoryRepository;
-        this.boardLikeRepository = boardLikeRepository;
-        this.s3UploaderService = s3UploaderService;
-    }
+    private final Optional<S3UploaderService> s3UploaderService;
 
     @Transactional
     public Long save(BoardDTO boardDTO, String email) throws IOException {
@@ -64,14 +56,16 @@ public class BoardService {
             boardEntity.setFileAttached(1);
             BoardEntity savedEntity = boardRepository.save(boardEntity);
 
-            if (s3UploaderService != null) {
-                String originalFilename = boardFile.getOriginalFilename();
-                String storedFileName = s3UploaderService.upload(boardFile, "images");
-                BoardFileEntity boardFileEntity = BoardFileEntity.toBoardFileEntity(savedEntity, originalFilename, storedFileName);
-                boardFileRepository.save(boardFileEntity);
-            } else {
-                System.out.println("S3 Uploader가 없어 파일 저장을 건너뜁니다. (local profile)");
-            }
+            s3UploaderService.ifPresent(uploader -> {
+                try {
+                    String originalFilename = boardFile.getOriginalFilename();
+                    String storedFileName = uploader.upload(boardFile, "images");
+                    BoardFileEntity boardFileEntity = BoardFileEntity.toBoardFileEntity(savedEntity, originalFilename, storedFileName);
+                    boardFileRepository.save(boardFileEntity);
+                } catch (IOException e) {
+                    throw new RuntimeException("S3 파일 업로드 중 오류가 발생했습니다.", e);
+                }
+            });
 
             return savedEntity.getId();
         }
@@ -101,19 +95,19 @@ public class BoardService {
         return boardEntityList.stream().map(this::convertToDto).collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public BoardDTO findById(Long id) {
+        boardRepository.updateHits(id);
         BoardEntity boardEntity = boardRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 없습니다. id=" + id));
-
-        // ◀ [수정] 모든 정보가 포함된 BoardDTO.toBoardDTO()를 사용하도록 변경
         BoardDTO boardDTO = BoardDTO.toBoardDTO(boardEntity);
-
-        if (s3UploaderService != null && boardEntity.getFileAttached() == 1 && !boardEntity.getBoardFileEntityList().isEmpty()) {
-            String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
-            String fileUrl = s3UploaderService.generatePresignedUrl(storedFileName);
-            boardDTO.setFileUrl(fileUrl);
-        }
+        s3UploaderService.ifPresent(uploader -> {
+            if (boardEntity.getFileAttached() == 1 && !boardEntity.getBoardFileEntityList().isEmpty()) {
+                String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
+                String fileUrl = uploader.generatePresignedUrl(storedFileName);
+                boardDTO.setFileUrl(fileUrl);
+            }
+        });
         return boardDTO;
     }
 
@@ -145,24 +139,13 @@ public class BoardService {
         boardRepository.delete(boardEntity);
     }
 
-    public void updateHits(Long id) {
-        boardRepository.updateHits(id);
-    }
-
-    @Transactional(readOnly = true)
-    public int getLikes(Long id) {
-        return boardRepository.findById(id)
-                .map(BoardEntity::getBoardLikes)
-                .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 없습니다. id=" + id));
-    }
-
     @Transactional(readOnly = true)
     public Page<BoardDTO> searchPosts(String keyword, Pageable pageable) {
         Page<BoardEntity> boardEntities = boardRepository.findByBoardTitleContainingOrBoardContentsContaining(keyword, keyword, pageable);
         return boardEntities.map(this::convertToDto);
     }
 
-    public boolean toggleLike(Long boardId, String email) {
+    public LikeResponseDTO toggleLike(Long boardId, String email) {
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         BoardEntity board = boardRepository.findById(boardId)
@@ -172,15 +155,17 @@ public class BoardService {
 
         if (like.isPresent()) {
             boardLikeRepository.delete(like.get());
-            board.setBoardLikes(board.getBoardLikes() - 1);
-            return false;
+            if (board.getBoardLikes() > 0) {
+                board.setBoardLikes(board.getBoardLikes() - 1);
+            }
+            return new LikeResponseDTO(false, board.getBoardLikes());
         } else {
             BoardLikeEntity newLike = new BoardLikeEntity();
             newLike.setMember(member);
             newLike.setBoard(board);
             boardLikeRepository.save(newLike);
             board.setBoardLikes(board.getBoardLikes() + 1);
-            return true;
+            return new LikeResponseDTO(true, board.getBoardLikes());
         }
     }
 
@@ -194,7 +179,6 @@ public class BoardService {
                 .collect(Collectors.toList());
     }
 
-    // 목록용 DTO 변환 메소드 (내용, 파일 등 제외)
     private BoardDTO convertToDto(BoardEntity board) {
         return new BoardDTO(
                 board.getId(),

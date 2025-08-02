@@ -1,6 +1,7 @@
 package com.codingrecipe.board.controller;
 
 import com.codingrecipe.board.dto.BoardDTO;
+import com.codingrecipe.board.dto.LikeResponseDTO;
 import com.codingrecipe.board.service.BoardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -14,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/boards")
@@ -78,7 +78,6 @@ public class BoardController {
     @GetMapping("/{id}")
     public ResponseEntity<BoardDTO> findById(@PathVariable Long id) {
         try {
-            boardService.updateHits(id);
             BoardDTO boardDTO = boardService.findById(id);
             return ResponseEntity.ok(boardDTO);
         } catch (IllegalArgumentException e) {
@@ -126,9 +125,8 @@ public class BoardController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
         }
         try {
-            boolean isLiked = boardService.toggleLike(boardId, email);
-            int likeCount = boardService.getLikes(boardId);
-            return ResponseEntity.ok(Map.of("isLiked", isLiked, "likeCount", likeCount));
+            LikeResponseDTO response = boardService.toggleLike(boardId, email);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }

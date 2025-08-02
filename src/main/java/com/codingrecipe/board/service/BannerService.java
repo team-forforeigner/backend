@@ -3,7 +3,7 @@ package com.codingrecipe.board.service;
 import com.codingrecipe.board.dto.BannerDTO;
 import com.codingrecipe.board.domain.BannerEntity;
 import com.codingrecipe.board.repository.BannerRepository;
-import lombok.RequiredArgsConstructor; // ◀ [추가]
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,13 +11,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional; // ◀ [추가]
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @Transactional
-@RequiredArgsConstructor // ◀ [추가]
+@RequiredArgsConstructor
 public class BannerService {
 
     private final BannerRepository bannerRepository;
@@ -30,10 +30,9 @@ public class BannerService {
                 .collect(Collectors.toList());
     }
 
-    public void createBanner(BannerDTO bannerDTO, MultipartFile imageFile) throws IOException {
+    public void createBanner(BannerDTO bannerDTO, MultipartFile imageFile) {
         BannerEntity bannerEntity = new BannerEntity();
 
-        // Optional을 사용하여 S3 서비스가 있을 때만 업로드 로직을 실행
         s3UploaderService.ifPresentOrElse(
                 uploader -> {
                     try {
@@ -57,7 +56,7 @@ public class BannerService {
         bannerRepository.save(bannerEntity);
     }
 
-    public void updateBanner(Long id, BannerDTO bannerDTO, MultipartFile imageFile) throws IOException {
+    public void updateBanner(Long id, BannerDTO bannerDTO, MultipartFile imageFile) {
         BannerEntity bannerEntity = bannerRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 배너를 찾을 수 없습니다. id=" + id));
 

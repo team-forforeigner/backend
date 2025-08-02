@@ -3,7 +3,7 @@ package com.codingrecipe.board.service;
 import com.codingrecipe.board.domain.Member;
 import com.codingrecipe.board.domain.Role;
 import com.codingrecipe.board.dto.EmailRequestDto;
-import com.codingrecipe.board.dto.PasswordChangeRequest; // ◀ [추가]
+import com.codingrecipe.board.dto.PasswordChangeRequest;
 import com.codingrecipe.board.dto.SignUpRequestDto;
 import com.codingrecipe.board.dto.UserInfoDto;
 import com.codingrecipe.board.repository.MemberRepository;
@@ -91,7 +91,6 @@ public class MemberService {
         emailService.sendTempPasswordEmail(dto.getEmail(), tempPassword);
     }
 
-    // ◀ [추가] 비밀번호 변경 메소드
     public void changePassword(String email, PasswordChangeRequest dto) {
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));

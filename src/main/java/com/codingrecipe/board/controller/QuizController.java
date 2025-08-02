@@ -26,7 +26,6 @@ public class QuizController {
             @RequestParam Category category,
             @RequestParam QuizMode mode,
             @AuthenticationPrincipal String email) {
-
         List<QuizDetailResponse> quizSet = quizService.createQuizSet(category, mode, email);
         return ResponseEntity.ok(quizSet);
     }
@@ -35,10 +34,8 @@ public class QuizController {
     public ResponseEntity<SubmitAnswerResponse> submitAnswer(
             @AuthenticationPrincipal String email,
             @RequestBody SubmitAnswerRequest request) {
-
         Member member = memberService.findMemberByEmail(email);
         request.setUserId(member.getId());
-
         SubmitAnswerResponse response = quizService.submitAnswer(request);
         return ResponseEntity.ok(response);
     }
@@ -47,7 +44,6 @@ public class QuizController {
     public ResponseEntity<Void> updateHintSetting(
             @AuthenticationPrincipal String email,
             @RequestBody HintSettingRequest request) {
-
         quizService.updateHintSetting(email, request.isEnabled());
         return ResponseEntity.ok().build();
     }

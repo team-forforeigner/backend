@@ -8,7 +8,6 @@ import com.codingrecipe.board.repository.QuizRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,7 +42,7 @@ public class QuizService {
                 .collect(Collectors.toList());
 
         if (attemptedQuizIds.isEmpty()) {
-            attemptedQuizIds.add(0L); // SQL IN 절 오류 방지
+            attemptedQuizIds.add(0L);
         }
 
         List<String> typesForMode = getTypesForMode(mode);
@@ -163,7 +162,6 @@ public class QuizService {
                 .collect(Collectors.toList());
     }
 
-    // ◀ [추가] '푼 문제 기록 보기' 메소드
     @Transactional(readOnly = true)
     public List<QuizAttemptResponse> getAttemptHistory(String email) {
         Member member = memberRepository.findByEmail(email)

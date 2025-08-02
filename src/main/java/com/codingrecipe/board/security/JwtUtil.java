@@ -62,11 +62,6 @@ public class JwtUtil {
                 .compact();
     }
 
-    public boolean validateToken(String token, String email) {
-        final String extractedEmail = getEmail(token);
-        return (extractedEmail.equals(email) && !isTokenExpired(token));
-    }
-
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(secretKey)
