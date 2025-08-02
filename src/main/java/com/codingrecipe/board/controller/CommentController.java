@@ -5,26 +5,26 @@ import com.codingrecipe.board.service.CommentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Controller
+@RestController
 @RequiredArgsConstructor
-@RequestMapping("/comment") // 댓글 관련 요청은 모두 /comment 로 받습니다.
+@RequestMapping("/api/comment")
 public class CommentController {
     private final CommentService commentService;
 
     @PostMapping("/save")
-    public ResponseEntity<List<CommentDTO>> save(@ModelAttribute CommentDTO commentDTO) {
-        // 댓글 저장 처리
+    public ResponseEntity<List<CommentDTO>> save(@RequestBody CommentDTO commentDTO) {
         commentService.save(commentDTO);
-        // 해당 게시글에 작성된 전체 댓글 목록을 다시 조회
         List<CommentDTO> commentDTOList = commentService.findAll(commentDTO.getBoardId());
-        // 댓글 목록을 JSON 형태로 반환
+        return new ResponseEntity<>(commentDTOList, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{boardId}")
+    public ResponseEntity<List<CommentDTO>> findAll(@PathVariable Long boardId) {
+        List<CommentDTO> commentDTOList = commentService.findAll(boardId);
         return new ResponseEntity<>(commentDTOList, HttpStatus.OK);
     }
 }

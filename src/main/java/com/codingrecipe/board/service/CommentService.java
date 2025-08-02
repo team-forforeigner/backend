@@ -1,16 +1,18 @@
 package com.codingrecipe.board.service;
 
 import com.codingrecipe.board.dto.CommentDTO;
-import com.codingrecipe.board.entity.BoardEntity;
-import com.codingrecipe.board.entity.CommentEntity;
+import com.codingrecipe.board.domain.BoardEntity;
+import com.codingrecipe.board.domain.CommentEntity;
 import com.codingrecipe.board.repository.BoardRepository;
 import com.codingrecipe.board.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -18,34 +20,44 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final BoardRepository boardRepository;
 
+    @Transactional
     public Long save(CommentDTO commentDTO) {
-        Optional<BoardEntity> optionalBoardEntity = boardRepository.findById(commentDTO.getBoardId());
-        if (optionalBoardEntity.isPresent()) {
-            BoardEntity boardEntity = optionalBoardEntity.get();
-            CommentEntity commentEntity = CommentEntity.toSaveEntity(commentDTO, boardEntity);
-            return commentRepository.save(commentEntity).getId();
-        } else {
-            return null;
+        BoardEntity boardEntity = boardRepository.findById(commentDTO.getBoardId())
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다: " + commentDTO.getBoardId()));
+
+        CommentEntity parentComment = null;
+        if (commentDTO.getParentId() != null) {
+            parentComment = commentRepository.findById(commentDTO.getParentId())
+                    .orElseThrow(() -> new IllegalArgumentException("부모 댓글을 찾을 수 없습니다: " + commentDTO.getParentId()));
         }
+
+        CommentEntity commentEntity = CommentEntity.toSaveEntity(commentDTO, boardEntity, parentComment);
+        return commentRepository.save(commentEntity).getId();
     }
 
+    @Transactional(readOnly = true)
     public List<CommentDTO> findAll(Long boardId) {
-        // boardId로 부모 엔티티를 조회합니다. Optional로 감싸서 안전하게 처리합니다.
-        Optional<BoardEntity> optionalBoardEntity = boardRepository.findById(boardId);
-        if (optionalBoardEntity.isPresent()) {
-            BoardEntity boardEntity = optionalBoardEntity.get();
-            List<CommentEntity> commentEntityList = commentRepository.findAllByBoardEntityOrderByIdDesc(boardEntity);
+        List<CommentEntity> commentEntityList = commentRepository.findAllByBoardEntity_IdOrderByCreatedTimeAsc(boardId);
 
-            List<CommentDTO> commentDTOList = new ArrayList<>();
-            for (CommentEntity commentEntity: commentEntityList) {
-                // [수정] toCommentDTO 메소드의 파라미터를 하나만 넘기도록 수정
-                CommentDTO commentDTO = CommentDTO.toCommentDTO(commentEntity);
-                commentDTOList.add(commentDTO);
+        Map<Long, CommentDTO> commentDTOMap = new HashMap<>();
+        commentEntityList.forEach(entity -> {
+            CommentDTO dto = CommentDTO.toCommentDTO(entity);
+            commentDTOMap.put(dto.getId(), dto);
+        });
+
+        List<CommentDTO> rootComments = new ArrayList<>();
+        commentEntityList.forEach(entity -> {
+            CommentDTO dto = commentDTOMap.get(entity.getId());
+            if (entity.getParent() != null) {
+                CommentDTO parentDto = commentDTOMap.get(entity.getParent().getId());
+                if (parentDto != null) {
+                    parentDto.getChildren().add(dto);
+                }
+            } else {
+                rootComments.add(dto);
             }
-            return commentDTOList;
-        } else {
-            // 게시글이 없는 경우 빈 리스트 반환
-            return new ArrayList<>();
-        }
+        });
+
+        return rootComments;
     }
 }
