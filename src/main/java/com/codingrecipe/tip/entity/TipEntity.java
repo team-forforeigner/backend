@@ -1,6 +1,6 @@
 package com.codingrecipe.tip.entity;
 
-import com.codingrecipe.tip.TipCategory;
+import com.codingrecipe.tip.domain.TipCategory;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;

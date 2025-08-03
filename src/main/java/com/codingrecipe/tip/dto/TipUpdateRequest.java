@@ -1,6 +1,6 @@
 package com.codingrecipe.tip.dto;
 
-import com.codingrecipe.tip.TipCategory;
+import com.codingrecipe.tip.domain.TipCategory;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

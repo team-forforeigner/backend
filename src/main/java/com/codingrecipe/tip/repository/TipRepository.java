@@ -1,6 +1,6 @@
 package com.codingrecipe.tip.repository;
 
-import com.codingrecipe.tip.TipCategory;
+import com.codingrecipe.tip.domain.TipCategory;
 import com.codingrecipe.tip.entity.TipEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

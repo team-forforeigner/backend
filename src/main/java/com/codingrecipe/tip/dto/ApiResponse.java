@@ -1,6 +1,7 @@
 package com.codingrecipe.tip.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -11,28 +12,26 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor(staticName = "of")
 @NoArgsConstructor
+@Builder
 public class ApiResponse<T> {
 
-    private boolean success; // 요청 성공 여부
-    private T data;          // 성공 데이터
-    private ApiError error;  // 실패 정보
+    private int statusCode; // HTTP 상태 코드 (200, 201, 400, ...)
+    private String message; // 설명 메시지
+    private T result;       // 실제 데이터
 
-    @Data
-    @AllArgsConstructor(staticName = "of")
-    @NoArgsConstructor
-    public static class ApiError {
-        private String code;     // 예: TIP_ALREADY_EXISTS
-        private String message;  // 예: 이미 등록된 질문입니다.
+    public static <T> ApiResponse<T> success(T result, String message, int statusCode) {
+        return ApiResponse.<T>builder()
+                .statusCode(statusCode)
+                .message(message)
+                .result(result)
+                .build();
     }
 
-    // 성공 응답 헬퍼
-    public static <T> ApiResponse<T> success(T data) {
-        return ApiResponse.of(true, data, null);
+    public static <T> ApiResponse<T> fail(int statusCode, String message) {
+        return ApiResponse.<T>builder()
+                .statusCode(statusCode)
+                .message(message)
+                .result(null)
+                .build();
     }
-
-    // 실패 응답 헬퍼
-    public static <T> ApiResponse<T> failure(String code, String message) {
-        return ApiResponse.of(false, null, ApiError.of(code, message));
-    }
-
 }

@@ -1,6 +1,6 @@
 package com.codingrecipe.tip.service;
 
-import com.codingrecipe.tip.TipCategory;
+import com.codingrecipe.tip.domain.TipCategory;
 import com.codingrecipe.tip.dto.TipCreateRequest;
 import com.codingrecipe.tip.dto.TipResponse;
 import com.codingrecipe.tip.dto.TipUpdateRequest;
@@ -16,6 +16,9 @@ public interface TipService {
 
     // 설명 : 팁 리스트 조회 (Page 적용)
     Page<TipResponse> getTips(Pageable pageable);
+
+    // 설명 : 팁 1개 조회
+    TipResponse getTipById(Long id);
 
     // 설명 : 카테고리별 팁 조회 (Page 적용)
     Page<TipResponse> getTipsByCategory(TipCategory category, Pageable pageable);

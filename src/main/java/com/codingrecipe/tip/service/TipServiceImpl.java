@@ -1,6 +1,6 @@
 package com.codingrecipe.tip.service;
 
-import com.codingrecipe.tip.TipCategory;
+import com.codingrecipe.tip.domain.TipCategory;
 import com.codingrecipe.tip.dto.*;
 import com.codingrecipe.tip.entity.TipEntity;
 import com.codingrecipe.tip.exception.TipAlreadyExistsException;
@@ -28,6 +28,7 @@ public class TipServiceImpl implements TipService {
 
     private final TipRepository tipRepository;
 
+    // 설명 : 팁 1개 저장
     @Override
     @Transactional
     public Long createTip(@NotNull TipCreateRequest dto) {
@@ -46,11 +47,19 @@ public class TipServiceImpl implements TipService {
         return saved.getId();
     }
 
-    // 설명 : 팁 조회
+    // 설명 : 팁 리스트 조회
     @Override
     public Page<TipResponse> getTips(Pageable pageable) {
         return tipRepository.findAll(pageable)
                 .map(TipResponse::fromEntity);
+    }
+
+    // 설명 : 팁 1개 조회
+    @Override
+    public TipResponse getTipById(Long id) {
+        TipEntity tip = tipRepository.findById(id)
+                .orElseThrow(() -> new TipNotFoundException(id));
+        return TipResponse.fromEntity(tip);
     }
 
     // 설명 : 카테고리별 팁 조회

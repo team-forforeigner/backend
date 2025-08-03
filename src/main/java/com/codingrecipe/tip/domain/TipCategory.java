@@ -1,4 +1,4 @@
-package com.codingrecipe.tip;
+package com.codingrecipe.tip.domain;
 
 // 설명 : 팁 카테고리입니다.
 
