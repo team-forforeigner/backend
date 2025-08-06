@@ -2,6 +2,7 @@ package com.codingrecipe.tip.dto;
 
 import com.codingrecipe.tip.domain.TipCategory;
 import com.codingrecipe.tip.entity.TipEntity;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
@@ -12,12 +13,12 @@ import lombok.*;
 @Builder
 public class TipCreateRequest implements TipRequestBase {
 
-    @NotNull
+    @NotBlank(message = "질문은 필수입니다.")
     private String question;
-    @NotNull
+    @NotBlank(message = "답변은 필수입니다.")
     private String answer;
     private String source;  // 선택
-    @NotNull
+    @NotNull(message = "카테고리는 필수입니다.")
     private TipCategory category;
 
     // DTO -> Entity 변환

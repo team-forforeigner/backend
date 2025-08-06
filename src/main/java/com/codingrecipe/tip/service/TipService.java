@@ -24,7 +24,7 @@ public interface TipService {
     Page<TipResponse> getTipsByCategory(TipCategory category, Pageable pageable);
 
     // 설명 : 팁 업데이트
-    boolean updateTip(TipUpdateRequest dto);
+    boolean updateTip(Long id, TipUpdateRequest dto);
 
     // 설명 : 팁 삭제
     void deleteTip(Long id);

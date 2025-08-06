@@ -32,11 +32,11 @@ public class TipServiceImpl implements TipService {
     @Override
     @Transactional
     public Long createTip(@NotNull TipCreateRequest dto) {
-        if (tipRepository.existsByQuestion(dto.getQuestion())) {
+        String normalizedQuestion = dto.getQuestion().replaceAll("\\s+", ""); // 모든 공백 제거
+
+        boolean exists = tipRepository.existsByQuestionIgnoreSpace(normalizedQuestion);
+        if (exists) {
             throw new TipAlreadyExistsException("이미 등록된 질문입니다.");
-        }
-        if (!isValid(dto)) {
-            throw new IllegalArgumentException("유효하지 않은 데이터입니다.");
         }
 
         String source = StringUtils.hasText(dto.getSource()) ? dto.getSource() : null;
@@ -72,9 +72,10 @@ public class TipServiceImpl implements TipService {
     // 설명 : 팁 업데이트
     @Override
     @Transactional
-    public boolean updateTip(@NotNull TipUpdateRequest dto) {
-        TipEntity tip = tipRepository.findById(dto.getId())
-                .orElseThrow(() -> new TipNotFoundException(dto.getId()));
+    public boolean updateTip(Long id, @NotNull TipUpdateRequest dto) {
+        TipEntity tip = tipRepository.findById(id)
+                .orElseThrow(() -> new TipNotFoundException(id));
+
 
         boolean changed = false;
 
@@ -118,11 +119,9 @@ public class TipServiceImpl implements TipService {
             if (isDuplicated(dto.getQuestion())) {
                 duplicatedQuestions.add(dto.getQuestion());
             } else {
-                if (isValid(dto)) {
-                    String source = StringUtils.hasText(dto.getSource()) ? dto.getSource() : null;
-                    dto.setSource(source);
-                    validTips.add(dto.toEntity());
-                }
+                String source = StringUtils.hasText(dto.getSource()) ? dto.getSource() : null;
+                dto.setSource(source);
+                validTips.add(dto.toEntity());
             }
         }
         // 정상적인 팁들 저장
@@ -137,13 +136,6 @@ public class TipServiceImpl implements TipService {
     // 설명 : 질문 중복 확인
     private boolean isDuplicated(String question) {
         return tipRepository.existsByQuestion(question);
-    }
-
-    // 설명 : DTO 유효성 검사
-    private boolean isValid(TipRequestBase dto) {
-        return StringUtils.hasText(dto.getQuestion()) &&
-                StringUtils.hasText(dto.getAnswer()) &&
-                dto.getCategory() != null;
     }
 
 

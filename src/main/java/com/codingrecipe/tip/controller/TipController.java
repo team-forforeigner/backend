@@ -72,7 +72,7 @@ public class TipController {
             Long id = tipServiceImpl.createTip(dto);
             return created(Map.of("id", id), "팁이 성공적으로 등록되었습니다.");
         } catch (TipAlreadyExistsException e) {
-            return fail(HttpStatus.CONFLICT, "이미 등록된 질문입니다.");
+            return fail(HttpStatus.CONFLICT, e.getMessage());
         } catch (IllegalArgumentException e) {
             return badRequest("유효하지 않은 데이터입니다.");
         }
@@ -82,8 +82,7 @@ public class TipController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Map<String, Boolean>>> updateTip(@PathVariable Long id,
                                                     @RequestBody @Valid TipUpdateRequest dto) {
-        dto.setId(id);
-        boolean changed = tipServiceImpl.updateTip(dto);
+        boolean changed = tipServiceImpl.updateTip(id, dto);
 
         String message = changed ? "수정 되었습니다." : "수정 되지 않았습니다.";
         return ok(Map.of("changed", changed), message);
@@ -92,8 +91,12 @@ public class TipController {
     // 설명 : 팁 삭제
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteTip(@PathVariable Long id) {
-        tipServiceImpl.deleteTip(id);
-        return ok(null, "팁이 삭제되었습니다.");
+        try {
+            tipServiceImpl.deleteTip(id);
+            return ok(null, "팁이 삭제되었습니다.");
+        } catch (TipNotFoundException e) {
+            return fail(HttpStatus.NOT_FOUND, e.getMessage());
+        }
     }
 
     // 설명 : 팁 여러 개 저장 (JSON 배열로 받기)

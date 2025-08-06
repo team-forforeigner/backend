@@ -3,7 +3,6 @@ package com.codingrecipe.tip.domain;
 // 설명 : 팁 카테고리입니다.
 
 public enum TipCategory {
-    ALL, // 전체
     LIVING, // 생활
     CULTURE, // 문화
     LANGUAGE, // 언어

@@ -37,61 +37,34 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
     }
 
-    /**
-     * 1. Enum 변환 실패 (잘못된 카테고리 등)
-     */
+    // 비즈니스 예외 (모든 서비스 공통)
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiResponse<?>> handleBusinessException(BusinessException ex) {
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.fail(HttpStatus.BAD_REQUEST.value(), ex.getMessage()));
+    }
+
+    // JSON 파싱 실패 (예: enum 변환 불가)
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<?>> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
         Throwable cause = ex.getCause();
-        if (cause instanceof InvalidFormatException) {
-            InvalidFormatException ife = (InvalidFormatException) cause;
-            if (ife.getTargetType() != null && ife.getTargetType().isEnum()) {
-                String allowedValues = Arrays.toString(TipCategory.values());
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.fail(
-                                HttpStatus.BAD_REQUEST.value(),
-                                "잘못된 카테고리 값입니다. 허용 값: " + allowedValues
-                        ));
-            }
+        if (cause instanceof InvalidFormatException ife && ife.getTargetType() != null && ife.getTargetType().isEnum()) {
+            String allowedValues = Arrays.toString(ife.getTargetType().getEnumConstants());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.fail(HttpStatus.BAD_REQUEST.value(),
+                            "잘못된 값입니다. 허용 값: " + allowedValues));
         }
-        // 그 외 메시지 변환 오류
         return ResponseEntity.badRequest()
-                .body(ApiResponse.fail(
-                        HttpStatus.BAD_REQUEST.value(),
-                        "요청 데이터 형식이 올바르지 않습니다."
-                ));
+                .body(ApiResponse.fail(HttpStatus.BAD_REQUEST.value(), "요청 데이터 형식이 올바르지 않습니다."));
     }
 
-    /**
-     * 2. @Valid 유효성 검사 실패
-     */
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<?>> handleValidationException(MethodArgumentNotValidException ex) {
-        String errorMessage = ex.getBindingResult()
-                .getAllErrors()
-                .stream()
-                .findFirst()
-                .map(err -> err.getDefaultMessage())
-                .orElse("유효하지 않은 요청입니다.");
-
-        return ResponseEntity.badRequest()
-                .body(ApiResponse.fail(
-                        HttpStatus.BAD_REQUEST.value(),
-                        errorMessage
-                ));
-    }
-
-    /**
-     * 3. 그 외 모든 예외 (서버 오류)
-     */
+    // 그 외 예상 못한 예외
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<?>> handleGenericException(Exception ex) {
-        ex.printStackTrace(); // 서버 로그 확인용
+    public ResponseEntity<ApiResponse<?>> handleException(Exception ex) {
+        // 로그 남기기
+        ex.printStackTrace();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.fail(
-                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                        "서버 오류가 발생했습니다."
-                ));
+                .body(ApiResponse.fail(HttpStatus.INTERNAL_SERVER_ERROR.value(), "서버에서 오류가 발생했습니다."));
     }
 
 }
