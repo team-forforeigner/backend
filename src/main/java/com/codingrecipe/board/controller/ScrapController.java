@@ -1,3 +1,4 @@
+// 게시글 스크랩 기능 관련 API 컨트롤러
 package com.codingrecipe.board.controller;
 
 import com.codingrecipe.board.dto.BoardDTO;
@@ -22,11 +23,11 @@ public class ScrapController {
     public ResponseEntity<String> addScrap(@PathVariable Long boardId,
                                            @AuthenticationPrincipal String userId) {
         if (userId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다");
         }
         try {
             scrapService.addScrap(userId, boardId);
-            return ResponseEntity.ok("게시글을 스크랩했습니다.");
+            return ResponseEntity.ok("게시글을 스크랩했습니다");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
@@ -37,11 +38,11 @@ public class ScrapController {
     public ResponseEntity<String> removeScrap(@PathVariable Long boardId,
                                               @AuthenticationPrincipal String userId) {
         if (userId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다");
         }
         try {
             scrapService.removeScrap(userId, boardId);
-            return ResponseEntity.ok("스크랩을 취소했습니다.");
+            return ResponseEntity.ok("스크랩을 취소했습니다");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
@@ -51,7 +52,7 @@ public class ScrapController {
     @GetMapping("/scraps/my")
     public ResponseEntity<?> getMyScraps(@AuthenticationPrincipal String userId) {
         if (userId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다");
         }
         try {
             List<BoardDTO> myScraps = scrapService.getMyScraps(userId);

@@ -1,17 +1,14 @@
+// 퀴즈의 카테고리 타입을 정의
 package com.codingrecipe.board.domain;
 
 public enum Category {
-    ALL("전체 퀴즈"),
-    // "신조어/유행어"
-    NEW_WORDS("신조어/유행어"),
-    // "K-역사"
-    HISTORY("K-역사"),
-    // "K-문화"
-    CULTURE("K-문화"),
-    // "K-콘테츠"
-    K_CONTENTS("K-콘텐츠");
+    ALL("전체 퀴즈"), // 전체 퀴즈
+    NEW_WORDS("신조어/유행어"), // 신조어/유행어
+    HISTORY("K-역사"), // K-역사
+    CULTURE("K-문화"), // K-문화
+    K_CONTENTS("K-콘텐츠"); // K-콘텐츠
 
-    private final String description;
+    private final String description; // 카테고리의 한글 설명
 
     Category(String description) {
         this.description = description;

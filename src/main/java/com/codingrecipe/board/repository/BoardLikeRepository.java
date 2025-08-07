@@ -1,3 +1,4 @@
+// 게시글 좋아요 데이터베이스 처리를 위한 리포지토리 인터페이스
 package com.codingrecipe.board.repository;
 
 import com.codingrecipe.board.domain.Member;
@@ -10,9 +11,9 @@ import java.util.Optional;
 
 public interface BoardLikeRepository extends JpaRepository<BoardLikeEntity, Long> {
 
-    // 사용자와 게시글로 '좋아요' 정보가 있는지 확인 (중복 방지용)
+    // 특정 사용자와 게시글로 좋아요 기록 조회 (중복 좋아요 방지용)
     Optional<BoardLikeEntity> findByMemberAndBoard(Member member, BoardEntity board);
 
-    // 사용자가 '좋아요' 누른 모든 게시글 목록 조회
+    // 특정 사용자가 누른 모든 좋아요 기록 조회
     List<BoardLikeEntity> findAllByMember(Member member);
 }

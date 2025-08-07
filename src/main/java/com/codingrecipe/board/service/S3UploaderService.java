@@ -1,3 +1,4 @@
+// AWS S3 파일 업로드 및 Presigned URL 생성을 처리하는 서비스
 package com.codingrecipe.board.service;
 
 import lombok.RequiredArgsConstructor;
@@ -24,15 +25,19 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Profile("!local") // 'local' 프로필이 아닐 때만 이 서비스를 로드합니다.
+@Profile("!local") // 'local' 프로필이 아닐 때만 이 서비스를 활성화
 public class S3UploaderService {
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
 
     @Value("${cloud.aws.s3.bucket-name}")
-    private String bucket;
+    private String bucket; // S3 버킷 이름
 
+    /**
+     * S3 객체에 대한 미리 서명된 URL(Presigned URL)을 생성
+     * (제한된 시간 동안만 개인 S3 객체에 접근할 수 있는 임시 URL)
+     */
     public String generatePresignedUrl(String fileKey) {
         if (fileKey == null || fileKey.isEmpty()) {
             return null;
@@ -44,7 +49,7 @@ public class S3UploaderService {
                     .build();
 
             GetObjectPresignRequest getObjectPresignRequest = GetObjectPresignRequest.builder()
-                    .signatureDuration(Duration.ofMinutes(10))
+                    .signatureDuration(Duration.ofMinutes(10)) // URL 유효 시간 10분으로 설정
                     .getObjectRequest(getObjectRequest)
                     .build();
 
@@ -58,19 +63,29 @@ public class S3UploaderService {
         }
     }
 
+    /**
+     * MultipartFile을 받아 S3에 업로드
+     */
     public String upload(MultipartFile multipartFile, String dirName) throws IOException {
+        // MultipartFile을 로컬 File 객체로 변환
         File uploadFile = convert(multipartFile)
                 .orElseThrow(() -> new IllegalArgumentException("MultipartFile -> File 전환 실패"));
         return upload(uploadFile, dirName);
     }
 
+    /**
+     * 로컬 File을 S3에 업로드하고 로컬 파일은 삭제
+     */
     private String upload(File uploadFile, String dirName) {
-        String fileName = dirName + "/" + uploadFile.getName();
-        putS3(uploadFile, fileName);
-        removeNewFile(uploadFile);
-        return fileName;
+        String fileName = dirName + "/" + uploadFile.getName(); // S3에 저장될 파일 경로 생성
+        putS3(uploadFile, fileName); // S3에 파일 업로드
+        removeNewFile(uploadFile); // 로컬에 생성된 임시 파일 삭제
+        return fileName; // S3에 저장된 파일 경로(key) 반환
     }
 
+    /**
+     * S3Client를 사용하여 파일을 S3 버킷에 업로드
+     */
     private void putS3(File uploadFile, String fileName) {
         PutObjectRequest request = PutObjectRequest.builder()
                 .bucket(bucket)
@@ -79,20 +94,27 @@ public class S3UploaderService {
         s3Client.putObject(request, RequestBody.fromFile(uploadFile));
     }
 
+    /**
+     * 업로드 과정에서 생성된 로컬 임시 파일을 삭제
+     */
     private void removeNewFile(File targetFile) {
         if (targetFile.delete()) {
-            log.info("로컬 임시 파일이 삭제되었습니다.");
+            log.info("로컬 임시 파일이 삭제되었습니다");
         } else {
-            log.info("로컬 임시 파일이 삭제되지 못했습니다.");
+            log.info("로컬 임시 파일이 삭제되지 못했습니다");
         }
     }
 
+    /**
+     * MultipartFile을 로컬 시스템의 임시 File 객체로 변환
+     */
     private Optional<File> convert(MultipartFile file) throws IOException {
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null) {
-            log.warn("원본 파일 이름이 null입니다. UUID로 대체합니다.");
+            log.warn("원본 파일 이름이 null입니다. UUID로 대체합니다");
             originalFilename = UUID.randomUUID().toString();
         }
+        // 파일 이름 중복을 피하기 위해 UUID를 앞에 붙임
         String uniqueFileName = UUID.randomUUID() + "_" + originalFilename;
         File convertFile = new File(uniqueFileName);
         if (convertFile.createNewFile()) {

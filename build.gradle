@@ -13,10 +13,6 @@ java {
 	}
 }
 
-springBoot {
-	mainClass = 'com.codingrecipe.board.BoardApplication'
-}
-
 // [배포 시 필요] AWS SDK 버전 관리를 위한 설정
 ext {
 	set('springCloudVersion', "3.1.0")
@@ -66,8 +62,7 @@ dependencies {
 
 	// 5. [배포 시 필요] AWS S3 라이브러리
 	implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
-	implementation platform('software.amazon.awssdk:bom:2.25.58')
-	implementation 'software.amazon.awssdk:s3'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 }
 
 tasks.named('test') {
