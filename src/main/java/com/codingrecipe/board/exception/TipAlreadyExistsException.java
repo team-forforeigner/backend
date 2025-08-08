@@ -1,0 +1,12 @@
+package com.codingrecipe.board.exception;
+
+/**
+ * 설명 : 이미 존재하는 팁을 추가하려고 할 때 발생하는 커스텀 예외 클래스입니다.
+ * 클라이언트 요청의 문제고, 시스템이 try-catch로 처리할 필요 없는 비즈니스 예외입니다.
+ */
+
+public class TipAlreadyExistsException extends BusinessException {
+    public TipAlreadyExistsException(String message) {
+        super(message);
+    }
+}
