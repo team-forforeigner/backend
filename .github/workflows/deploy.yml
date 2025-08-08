@@ -58,8 +58,8 @@ jobs:
             
             cd /home/ec2-user/app
             
-            # 새 JAR 실행
-            nohup java -jar app.jar > app.log 2>&1 &
+#            # 새 JAR 실행
+#            nohup java -jar app.jar > app.log 2>&1 &
             
             # 임시 폴더 삭제
             rm -rf /home/ec2-user/temp
