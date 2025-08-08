@@ -23,14 +23,14 @@ import java.util.Map;
 import static com.codingrecipe.board.util.ApiResponseUtil.*;
 
 @RestController
-@RequestMapping("/api/tips")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class TipController {
 
     private final TipServiceImpl tipServiceImpl;
 
     // 설명 : 팁 리스트 조회. 카테고리별로 조회 가능 (기본값은 ALL)
-    @GetMapping
+    @GetMapping("/tips")
     public ResponseEntity<ApiResponse<Page<TipResponse>>> getTips(
             @RequestParam(defaultValue = "ALL") String category,
             @RequestParam(defaultValue = "0") int page,
@@ -56,7 +56,7 @@ public class TipController {
     }
 
     // 설명 : 팁 1개 조회
-    @GetMapping("/{id}")
+    @GetMapping("/admin/tips/{id}")
     public ResponseEntity<ApiResponse<TipResponse>> getTipById(@PathVariable Long id) {
         try {
             return ok(tipServiceImpl.getTipById(id), "성공적으로 조회되었습니다.");
@@ -66,7 +66,7 @@ public class TipController {
     }
 
     // 설명 : 팁 1개 저장
-    @PostMapping
+    @PostMapping("/admin/tips")
     public ResponseEntity<ApiResponse<Map<String, Long>>> saveTip(@RequestBody @Valid TipCreateRequest dto) {
         try {
             Long id = tipServiceImpl.createTip(dto);
@@ -79,7 +79,7 @@ public class TipController {
     }
 
     // 설명 : 팁 수정
-    @PutMapping("/{id}")
+    @PutMapping("/admin/tips/{id}")
     public ResponseEntity<ApiResponse<Map<String, Boolean>>> updateTip(@PathVariable Long id,
                                                     @RequestBody @Valid TipUpdateRequest dto) {
         boolean changed = tipServiceImpl.updateTip(id, dto);
@@ -89,7 +89,7 @@ public class TipController {
     }
 
     // 설명 : 팁 삭제
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/admin/tips/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteTip(@PathVariable Long id) {
         try {
             tipServiceImpl.deleteTip(id);
@@ -100,7 +100,7 @@ public class TipController {
     }
 
     // 설명 : 팁 여러 개 저장 (JSON 배열로 받기)
-    @PostMapping("/import")
+    @PostMapping("/admin/tips/import")
     public ResponseEntity<ApiResponse<Map<String, String>>> importFromJson(@RequestBody @Valid List<TipCreateRequest> tipList) {
         String result = tipServiceImpl.importFromJson(tipList);
         return ok(Map.of("message", result), "팁이 일괄 등록되었습니다.");
