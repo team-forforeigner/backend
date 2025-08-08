@@ -43,7 +43,6 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_KEY }}
-          script_stop: true
           script: |
             echo "⚡ 서버 재시작 시작"
             
