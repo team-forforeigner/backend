@@ -1,24 +1,17 @@
+// 회원 데이터베이스 처리를 위한 리포지토리 인터페이스
 package com.codingrecipe.board.repository;
 
 import com.codingrecipe.board.domain.Member;
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import java.util.List;
 import java.util.Optional;
 
-// 회원 데이터에 접근하기 위한 규칙(메서드)을 정의하는 인터페이스 (수정됨)
-public interface MemberRepository {
+public interface MemberRepository extends JpaRepository<Member, Long> {
 
-    // 회원 정보를 저장하거나 업데이트
-    Member save(Member member);
-
-    // DB의 기본 키(id)로 회원을 찾는다.
-    Optional<Member> findById(Long id);
-
-    // 이메일로 회원을 찾는다. (이제 주요 식별자)
+    // 이메일로 회원 정보 조회
     Optional<Member> findByEmail(String email);
 
-    // 소셜 로그인 제공자와 제공자 ID로 회원을 찾는다.
-    Optional<Member> findByProviderAndProviderId(String provider, String providerId);
-
-    // 모든 회원 목록을 반환
-    List<Member> findAll();
+    // 경험치 높은 순으로 상위 100명 조회 (랭킹용)
+    List<Member> findTop100ByOrderByExperienceDesc();
 }

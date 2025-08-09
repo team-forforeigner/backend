@@ -1,6 +1,6 @@
+// 소셜 로그인(OAuth2) 성공 후의 로직을 처리하는 핸들러
 package com.codingrecipe.board.security;
 
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -21,25 +21,30 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
     private final JwtUtil jwtUtil;
 
+    /**
+     * OAuth2 인증 성공 시 호출되는 메서드
+     */
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
         log.info("OAuth2 로그인 성공!");
+        // 인증 객체에서 OAuth2 사용자 정보 추출
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
-        // Principal의 이름은 CustomOAuth2UserService에서 설정한 email이 됩니다.
+        // 사용자 정보에서 이메일 추출
         String email = oAuth2User.getName();
 
-        // email을 사용하여 JWT 토큰 생성
+        // 추출한 이메일로 JWT 토큰 생성
         String token = jwtUtil.generateToken(email);
         log.info("발급된 JWT 토큰: {}", token);
 
-        // 프론트엔드로 토큰을 전달하기 위한 리다이렉트 URL 생성
+        // 프론트엔드 리다이렉트 URL에 토큰을 쿼리 파라미터로 추가
         String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/oauth-redirect")
                 .queryParam("token", token)
                 .build()
                 .encode(StandardCharsets.UTF_8)
                 .toUriString();
 
+        // 생성된 URL로 클라이언트를 리다이렉트
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 }

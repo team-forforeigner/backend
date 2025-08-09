@@ -1,13 +1,15 @@
+// 게시판(커뮤니티) 관련 비즈니스 로직을 처리하는 서비스
 package com.codingrecipe.board.service;
 
 import com.codingrecipe.board.domain.Member;
 import com.codingrecipe.board.dto.BoardDTO;
-import com.codingrecipe.board.entity.BoardEntity;
-import com.codingrecipe.board.entity.BoardFileEntity;
-import com.codingrecipe.board.entity.BoardLikeEntity;
-import com.codingrecipe.board.entity.CategoryEntity;
+import com.codingrecipe.board.dto.LikeResponseDTO;
+import com.codingrecipe.board.domain.BoardEntity;
+import com.codingrecipe.board.domain.BoardFileEntity;
+import com.codingrecipe.board.domain.BoardLikeEntity;
+import com.codingrecipe.board.domain.CategoryEntity;
 import com.codingrecipe.board.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,34 +23,31 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class BoardService {
 
+    // 의존성 주입
     private final BoardRepository boardRepository;
     private final MemberRepository memberRepository;
     private final BoardFileRepository boardFileRepository;
     private final CategoryRepository categoryRepository;
     private final BoardLikeRepository boardLikeRepository;
-    private final S3UploaderService s3UploaderService;
+    private final Optional<S3UploaderService> s3UploaderService;
 
-    @Autowired
-    public BoardService(BoardRepository boardRepository, MemberRepository memberRepository, BoardFileRepository boardFileRepository, CategoryRepository categoryRepository, BoardLikeRepository boardLikeRepository, @Autowired(required = false) S3UploaderService s3UploaderService) {
-        this.boardRepository = boardRepository;
-        this.memberRepository = memberRepository;
-        this.boardFileRepository = boardFileRepository;
-        this.categoryRepository = categoryRepository;
-        this.boardLikeRepository = boardLikeRepository;
-        this.s3UploaderService = s3UploaderService;
-    }
-
+    /**
+     * 새로운 게시글을 저장 (파일 첨부 처리 포함)
+     */
     @Transactional
-    public Long save(BoardDTO boardDTO, String email) throws IOException { // 변경: userId -> email
-        // 변경: findByUserId -> findByEmail
+    public Long save(BoardDTO boardDTO, String email) throws IOException {
+        // 작성자 정보 조회
         Member writer = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + email));
 
+        // 카테고리 정보 조회
         CategoryEntity category = categoryRepository.findById(boardDTO.getCategoryId())
                 .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다: " + boardDTO.getCategoryId()));
 
+        // DTO를 Entity로 변환 (기본 정보 설정)
         BoardEntity boardEntity = new BoardEntity();
         boardEntity.setWriter(writer);
         boardEntity.setBoardTitle(boardDTO.getBoardTitle());
@@ -58,155 +57,180 @@ public class BoardService {
         boardEntity.setCategory(category);
 
         MultipartFile boardFile = boardDTO.getBoardFile();
+        // 첨부 파일이 없는 경우
         if (boardFile == null || boardFile.isEmpty()) {
             boardEntity.setFileAttached(0);
             return boardRepository.save(boardEntity).getId();
-        } else {
+        } else { // 첨부 파일이 있는 경우
             boardEntity.setFileAttached(1);
+            // 게시글 정보를 먼저 저장하여 ID를 확보
             BoardEntity savedEntity = boardRepository.save(boardEntity);
 
-            if (s3UploaderService != null) {
-                String originalFilename = boardFile.getOriginalFilename();
-                String storedFileName = s3UploaderService.upload(boardFile, "images");
-                BoardFileEntity boardFileEntity = BoardFileEntity.toBoardFileEntity(savedEntity, originalFilename, storedFileName);
-                boardFileRepository.save(boardFileEntity);
-            } else {
-                System.out.println("S3 Uploader가 없어 파일 저장을 건너뜁니다. (local profile)");
-            }
+            // S3 서비스가 활성화된 경우에만 파일 업로드 수행
+            s3UploaderService.ifPresent(uploader -> {
+                try {
+                    String originalFilename = boardFile.getOriginalFilename();
+                    String storedFileName = uploader.upload(boardFile, "images");
+                    // 파일 정보 엔티티 생성 및 저장
+                    BoardFileEntity boardFileEntity = BoardFileEntity.toBoardFileEntity(savedEntity, originalFilename, storedFileName);
+                    boardFileRepository.save(boardFileEntity);
+                } catch (IOException e) {
+                    throw new RuntimeException("S3 파일 업로드 중 오류가 발생했습니다", e);
+                }
+            });
 
             return savedEntity.getId();
         }
     }
 
+    /**
+     * 전체 게시글 목록을 페이징하여 조회
+     */
     @Transactional(readOnly = true)
     public Page<BoardDTO> paging(Pageable pageable) {
         Page<BoardEntity> boardEntities = boardRepository.findAll(pageable);
         return boardEntities.map(this::convertToDto);
     }
 
+    /**
+     * 특정 카테고리의 게시글 목록을 페이징하여 조회
+     */
     @Transactional(readOnly = true)
     public Page<BoardDTO> pagingByCategory(Long categoryId, Pageable pageable) {
         Page<BoardEntity> boardEntities = boardRepository.findByCategoryId(categoryId, pageable);
         return boardEntities.map(this::convertToDto);
     }
 
+    /**
+     * 특정 사용자가 작성한 게시글 목록을 페이징하여 조회
+     */
     @Transactional(readOnly = true)
-    public Page<BoardDTO> pagingByWriter(String email, Pageable pageable) { // 변경: userId -> email
-        // 참고: BoardRepository에 findByWriter_Email 메소드가 필요합니다.
+    public Page<BoardDTO> pagingByWriter(String email, Pageable pageable) {
         Page<BoardEntity> boardEntities = boardRepository.findByWriter_Email(email, pageable);
         return boardEntities.map(this::convertToDto);
     }
 
+    /**
+     * 좋아요 수가 가장 많은 상위 3개 게시글 조회
+     */
     @Transactional(readOnly = true)
     public List<BoardDTO> findTop3ByLikes() {
         List<BoardEntity> boardEntityList = boardRepository.findTop3ByOrderByBoardLikesDesc();
         return boardEntityList.stream().map(this::convertToDto).collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
+    /**
+     * 특정 게시글의 상세 정보를 조회 (조회수 증가 처리 포함)
+     */
+    @Transactional
     public BoardDTO findById(Long id) {
+        boardRepository.updateHits(id); // 조회수 1 증가
         BoardEntity boardEntity = boardRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 없습니다. id=" + id));
-        BoardDTO boardDTO = convertToDto(boardEntity);
-        if (s3UploaderService != null && boardEntity.getFileAttached() == 1 && !boardEntity.getBoardFileEntityList().isEmpty()) {
-            String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
-            String fileUrl = s3UploaderService.generatePresignedUrl(storedFileName);
-            boardDTO.setFileUrl(fileUrl);
-        }
+        BoardDTO boardDTO = BoardDTO.toBoardDTO(boardEntity);
+
+        // S3 서비스가 활성화되어 있고 파일이 첨부된 경우, 미리 서명된 URL 생성
+        s3UploaderService.ifPresent(uploader -> {
+            if (boardEntity.getFileAttached() == 1 && !boardEntity.getBoardFileEntityList().isEmpty()) {
+                String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
+                String fileUrl = uploader.generatePresignedUrl(storedFileName);
+                boardDTO.setFileUrl(fileUrl);
+            }
+        });
         return boardDTO;
     }
 
-    public void update(Long id, BoardDTO boardDTO, String email) { // 변경: userId -> email
+    /**
+     * 특정 게시글의 정보를 수정 (작성자만 가능)
+     */
+    public void update(Long id, BoardDTO boardDTO, String email) {
         BoardEntity boardEntity = boardRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 없습니다. id=" + id));
 
-        // 변경: getUserId() -> getEmail()
+        // 수정 권한 확인
         if (boardEntity.getWriter() == null || !boardEntity.getWriter().getEmail().equals(email)) {
-            throw new IllegalStateException("수정 권한이 없습니다.");
+            throw new IllegalStateException("수정 권한이 없습니다");
         }
 
+        // 카테고리 변경이 있는 경우
         if (boardDTO.getCategoryId() != null) {
             CategoryEntity category = categoryRepository.findById(boardDTO.getCategoryId())
                     .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다: " + boardDTO.getCategoryId()));
             boardEntity.setCategory(category);
         }
 
+        // 제목 및 내용 업데이트
         boardEntity.setBoardTitle(boardDTO.getBoardTitle());
         boardEntity.setBoardContents(boardDTO.getBoardContents());
     }
 
-    public void delete(Long boardId, String email) { // 변경: userId -> email
+    /**
+     * 특정 게시글을 삭제 (작성자만 가능)
+     */
+    public void delete(Long boardId, String email) {
         BoardEntity boardEntity = boardRepository.findById(boardId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다"));
 
-        // 변경: getUserId() -> getEmail()
+        // 삭제 권한 확인
         if (boardEntity.getWriter() == null || !boardEntity.getWriter().getEmail().equals(email)) {
-            throw new IllegalStateException("삭제 권한이 없습니다.");
+            throw new IllegalStateException("삭제 권한이 없습니다");
         }
         boardRepository.delete(boardEntity);
     }
 
-    public void updateHits(Long id) {
-        boardRepository.updateHits(id);
-    }
-
-    @Transactional(readOnly = true)
-    public int getLikes(Long id) {
-        return boardRepository.findById(id)
-                .map(BoardEntity::getBoardLikes)
-                .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 없습니다. id=" + id));
-    }
-
+    /**
+     * 키워드로 게시글을 검색한 결과를 페이징하여 조회
+     */
     @Transactional(readOnly = true)
     public Page<BoardDTO> searchPosts(String keyword, Pageable pageable) {
         Page<BoardEntity> boardEntities = boardRepository.findByBoardTitleContainingOrBoardContentsContaining(keyword, keyword, pageable);
         return boardEntities.map(this::convertToDto);
     }
 
-    public boolean toggleLike(Long boardId, String email) { // 변경: userId -> email
-        // 변경: findByUserId -> findByEmail
+    /**
+     * 게시글 좋아요를 추가하거나 취소 (토글 방식)
+     */
+    public LikeResponseDTO toggleLike(Long boardId, String email) {
         Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
         BoardEntity board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다"));
 
         Optional<BoardLikeEntity> like = boardLikeRepository.findByMemberAndBoard(member, board);
 
-        if (like.isPresent()) {
+        if (like.isPresent()) { // 이미 좋아요를 누른 경우 -> 좋아요 취소
             boardLikeRepository.delete(like.get());
-            board.setBoardLikes(board.getBoardLikes() - 1);
-            return false;
-        } else {
+            if (board.getBoardLikes() > 0) {
+                board.setBoardLikes(board.getBoardLikes() - 1);
+            }
+            return new LikeResponseDTO(false, board.getBoardLikes());
+        } else { // 좋아요를 누르지 않은 경우 -> 좋아요 추가
             BoardLikeEntity newLike = new BoardLikeEntity();
             newLike.setMember(member);
             newLike.setBoard(board);
             boardLikeRepository.save(newLike);
             board.setBoardLikes(board.getBoardLikes() + 1);
-            return true;
+            return new LikeResponseDTO(true, board.getBoardLikes());
         }
     }
 
+    /**
+     * 특정 사용자가 좋아요를 누른 모든 게시글 목록을 조회
+     */
     @Transactional(readOnly = true)
-    public List<BoardDTO> getMyLikedPosts(String email) { // 변경: userId -> email
-        // 변경: findByUserId -> findByEmail
+    public List<BoardDTO> getMyLikedPosts(String email) {
         Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
         List<BoardLikeEntity> likes = boardLikeRepository.findAllByMember(member);
         return likes.stream()
                 .map(like -> convertToDto(like.getBoard()))
                 .collect(Collectors.toList());
     }
 
+    /**
+     * BoardEntity를 목록 조회용 BoardDTO로 변환하는 내부 메서드
+     */
     private BoardDTO convertToDto(BoardEntity board) {
-        return new BoardDTO(
-                board.getId(),
-                // 변경: getName() -> getNickname()
-                board.getWriter() != null ? board.getWriter().getNickname() : "탈퇴한 사용자",
-                board.getBoardTitle(),
-                board.getBoardHits(),
-                board.getBoardLikes(),
-                board.getCreatedTime(),
-                board.getCategory() != null ? board.getCategory().getName() : "미지정"
-        );
+        return BoardDTO.toBoardDTO(board);
     }
 }
