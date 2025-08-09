@@ -1,14 +1,22 @@
 package com.codingrecipe.board.config;
 
+import io.lettuce.core.SocketOptions;
+import io.lettuce.core.cluster.ClusterClientOptions;
+import io.lettuce.core.cluster.ClusterTopologyRefreshOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisClusterConfiguration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+import java.time.Duration;
+import java.util.List;
 
 /**
  * 설명 : Redis 설정 클래스입니다.
@@ -17,22 +25,31 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfig {
 
-    @Value("${spring.data.redis.host}")
-    private String redisHost;
+    @Value("${spring.data.redis.cluster.nodes}")
+    private List<String> clusterNodes;
 
-    @Value("${spring.data.redis.port}")
-    private int redisPort;
+    @Value("${spring.data.redis.password:}")
+    private String password;
 
-    @Value("${spring.data.redis.ssl.enable:false}") // 기본값은 false로 설정
+    @Value("${spring.data.redis.timeout:5000}")
+    private long timeoutMillis;
+
+    @Value("${spring.data.redis.ssl:false}")
     private boolean useSsl;
 
     @Bean
-    public LettuceConnectionFactory redisConnectionFactory() {
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
-        config.setHostName(redisHost);
-        config.setPort(redisPort);
+    public RedisConnectionFactory redisConnectionFactory() {
 
-        LettuceClientConfiguration.LettuceClientConfigurationBuilder clientConfigBuilder = LettuceClientConfiguration.builder();
+        // 클러스터 노드 설정
+        RedisClusterConfiguration clusterConfig = new RedisClusterConfiguration(clusterNodes);
+        if (!password.isEmpty()) {
+            clusterConfig.setPassword(password);
+        }
+        clusterConfig.setMaxRedirects(3);
+
+        // Lettuce Client 설정
+        LettuceClientConfiguration.LettuceClientConfigurationBuilder clientConfigBuilder = LettuceClientConfiguration.builder()
+                .commandTimeout(Duration.ofMillis(timeoutMillis));
 
         if (useSsl) {
             clientConfigBuilder.useSsl();
@@ -40,14 +57,20 @@ public class RedisConfig {
 
         LettuceClientConfiguration clientConfig = clientConfigBuilder.build();
 
-        return new LettuceConnectionFactory(config, clientConfig);
+        // LettuceConnectionFactory 생성
+        return new LettuceConnectionFactory(clusterConfig, clientConfig);
     }
 
     @Bean
-    public RedisTemplate<String, String> redisTemplate() {
+    public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, String> template = new RedisTemplate<>();
-        template.setConnectionFactory(redisConnectionFactory());
+        template.setConnectionFactory(connectionFactory);
+
+        // 키, 값 직렬화 (문자열)
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new StringRedisSerializer());
+
         return template;
     }
-
 }
+
