@@ -23,29 +23,30 @@ public class RedisConfig {
     @Value("${spring.data.redis.port}")
     private int redisPort;
 
-    @Value("${spring.data.redis.ssl:false}") // 기본은 false, 필요시 true
+    @Value("${spring.data.redis.ssl.enable:false}") // 기본값은 false로 설정
     private boolean useSsl;
 
     @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
+    public LettuceConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
-        config.setHostName(redisHost.trim()); // 혹시 모를 공백 제거
+        config.setHostName(redisHost);
         config.setPort(redisPort);
 
-        LettuceClientConfiguration.LettuceClientConfigurationBuilder clientConfig = LettuceClientConfiguration.builder();
+        LettuceClientConfiguration.LettuceClientConfigurationBuilder clientConfigBuilder = LettuceClientConfiguration.builder();
+
         if (useSsl) {
-            clientConfig.useSsl();
+            clientConfigBuilder.useSsl();
         }
 
-        return new LettuceConnectionFactory(config, clientConfig.build());
+        LettuceClientConfiguration clientConfig = clientConfigBuilder.build();
+
+        return new LettuceConnectionFactory(config, clientConfig);
     }
 
     @Bean
-    public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory connectionFactory) {
+    public RedisTemplate<String, String> redisTemplate() {
         RedisTemplate<String, String> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new StringRedisSerializer());
+        template.setConnectionFactory(redisConnectionFactory());
         return template;
     }
 
