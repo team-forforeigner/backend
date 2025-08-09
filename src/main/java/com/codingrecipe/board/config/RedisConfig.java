@@ -1,8 +1,6 @@
 package com.codingrecipe.board.config;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -17,28 +15,38 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  */
 
 @Configuration
-@EnableConfigurationProperties(RedisProperties.class)
 public class RedisConfig {
 
-    private final RedisProperties redisProperties;
+    @Value("${spring.data.redis.host}")
+    private String redisHost;
 
-    public RedisConfig(RedisProperties redisProperties) {
-        this.redisProperties = redisProperties;
-    }
+    @Value("${spring.data.redis.port}")
+    private int redisPort;
+
+    @Value("${spring.data.redis.ssl:false}") // 기본은 false, 필요시 true
+    private boolean useSsl;
 
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
-        config.setHostName(redisProperties.getHost());
-        config.setPort(redisProperties.getPort());
+        config.setHostName(redisHost.trim()); // 혹시 모를 공백 제거
+        config.setPort(redisPort);
 
         LettuceClientConfiguration.LettuceClientConfigurationBuilder clientConfig = LettuceClientConfiguration.builder();
-
-        if (redisProperties.getSsl() != null && redisProperties.getSsl().isEnabled()) {
+        if (useSsl) {
             clientConfig.useSsl();
         }
 
         return new LettuceConnectionFactory(config, clientConfig.build());
     }
-}
 
+    @Bean
+    public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, String> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new StringRedisSerializer());
+        return template;
+    }
+
+}
