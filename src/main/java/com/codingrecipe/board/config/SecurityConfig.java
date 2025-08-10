@@ -69,13 +69,6 @@ public class SecurityConfig {
         // 모든 요청 처리 이전에 JWT 필터를 먼저 실행하도록 설정
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
-        // 인증 실패 시 응답 처리 설정
-        // (*웹 브라우저로 접속했을 때 구글 로그인이 떠야 되는데, 이걸 적용하고 나서 안 떠서 주석 처리함)
-        /*http.exceptionHandling(exceptions -> exceptions
-                .authenticationEntryPoint(authenticationEntryPoint) // 인증되지 않은 사용자가 접근할 경우
-                .accessDeniedHandler(accessDeniedHandler) // 접근이 거부된 경우 (예: 권한 부족)
-        );*/
-
         return http.build();
     }
 
