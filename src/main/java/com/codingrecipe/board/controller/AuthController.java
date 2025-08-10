@@ -95,11 +95,12 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<String> logout(HttpServletRequest request) {
-        // 로그아웃 처리 (JWT 토큰을 만료시키거나 블랙리스트에 추가)
+        // 로그아웃 처리 (DB 기반 블랙리스트에 토큰 추가)
         String token = jwtUtil.resolveToken(request); // 요청 헤더에서 JWT 토큰 추출
         if (token != null) {
-            long expiration = jwtUtil.getExpiration(token); // 토큰의 만료 시간 조회
-            logoutService.logout(token, expiration); // 토큰을 로그아웃 처리
+
+            // 더 이상 만료 시간을 파라미터로 넘기지 않음
+            logoutService.logout(token);
         }
         return ResponseEntity.ok("성공적으로 로그아웃되었습니다");
     }

@@ -27,7 +27,7 @@ public class QuizService {
     private final QuizRepository quizRepository;
     private final MemberRepository memberRepository;
     private final QuizAttemptRepository quizAttemptRepository;
-    // --- [보스전] 신규 의존성 주입 ---
+    // --- [보스전] 의존성 주입 ---
     private final BossStageRepository bossStageRepository;
     private final BossPhaseRepository bossPhaseRepository;
     private final BossBattleStateRepository bossBattleStateRepository;
