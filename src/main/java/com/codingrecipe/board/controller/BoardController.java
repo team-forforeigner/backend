@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -97,7 +98,7 @@ public class BoardController {
      * 게시글 이미지 조회
      * - 이미지가 첨부된 게시글에 대해 S3에서 이미지 파일을 바이트 배열로 반환
      */
-    @GetMapping("/{id}/image")
+    /*@GetMapping("/{id}/image")
     public ResponseEntity<byte[]> getBoardImage(@PathVariable Long id) {
         try {
             byte[] imageBytes = boardService.getBoardImageBytes(id);
@@ -111,7 +112,7 @@ public class BoardController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-    }
+    }*/
 
     @PutMapping("/{id}")
     public ResponseEntity<String> update(@PathVariable Long id,

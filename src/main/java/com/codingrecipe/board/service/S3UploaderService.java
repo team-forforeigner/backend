@@ -9,8 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
@@ -21,13 +20,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Profile("!local") // 'local' 프로필이 아닐 때만 이 서비스를 활성화
+//@Profile("!local") // 'local' 프로필이 아닐 때만 이 서비스를 활성화
 public class S3UploaderService {
 
     private final S3Client s3Client;
@@ -35,6 +33,9 @@ public class S3UploaderService {
 
     @Value("${cloud.aws.s3.bucket-name}")
     private String bucket; // S3 버킷 이름
+
+    @Value("${cloud.aws.region.static}")
+    private String region; // 주입받음
 
     /**
      * S3 객체에 대한 미리 서명된 URL(Presigned URL)을 생성
@@ -65,25 +66,6 @@ public class S3UploaderService {
         }
     }
 
-    /**
-     * MultipartFile을 받아 S3에 업로드
-     */
-//    public String upload(MultipartFile multipartFile, String dirName) throws IOException {
-//        // MultipartFile을 로컬 File 객체로 변환
-//        File uploadFile = convert(multipartFile)
-//                .orElseThrow(() -> new IllegalArgumentException("MultipartFile -> File 전환 실패"));
-//        return upload(uploadFile, dirName);
-//    }
-
-    /**
-     * 로컬 File을 S3에 업로드하고 로컬 파일은 삭제
-     */
-//    private String upload(File uploadFile, String dirName) {
-//        String fileName = dirName + "/" + uploadFile.getName(); // S3에 저장될 파일 경로 생성
-//        putS3(uploadFile, fileName); // S3에 파일 업로드
-//        removeNewFile(uploadFile); // 로컬에 생성된 임시 파일 삭제
-//        return fileName; // S3에 저장된 파일 경로(key) 반환
-//    }
     /**
      * MultipartFile을 받아 S3에 업로드하고 로컬 임시 파일을 삭제
      */
@@ -225,16 +207,7 @@ public class S3UploaderService {
             log.warn("원본 파일 이름이 null입니다. UUID로 대체합니다");
             originalFilename = UUID.randomUUID().toString();
         }
-//        // 파일 이름 중복을 피하기 위해 UUID를 앞에 붙임g
-//        String uniqueFileName = UUID.randomUUID() + "_" + originalFilename;
-//        File convertFile = new File(uniqueFileName);
-//        if (convertFile.createNewFile()) {
-//            try (FileOutputStream fos = new FileOutputStream(convertFile)) {
-//                fos.write(file.getBytes());
-//            }
-//            return Optional.of(convertFile);
-//        }
-//        return Optional.empty();
+//
         Path tempFile = Files.createTempFile("s3-upload-", originalFilename);
 
         // MultipartFile의 내용을 임시 파일에 씁니다.
@@ -242,4 +215,44 @@ public class S3UploaderService {
 
         return Optional.of(tempFile.toFile());
     }
+
+    // S3 파일 목록 조회
+    public List<Map<String, Object>> listImages() {
+        ListObjectsV2Request request = ListObjectsV2Request.builder()
+                .bucket(bucket)
+                .build();
+
+        ListObjectsV2Response result = s3Client.listObjectsV2(request);
+
+        return result.contents().stream()
+                .map(s -> {
+                    Map<String, Object> fileData = new HashMap<>();
+                    fileData.put("filename", s.key());
+                    fileData.put("url", String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, region, s.key()));
+                    fileData.put("size", s.size());
+                    fileData.put("lastModified", s.lastModified().toString());
+                    return fileData;
+                })
+                .toList();
+    }
+
+    // S3 파일 삭제
+    public void deleteFile(String fileKey) {
+        DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                .bucket(bucket)
+                .key(fileKey)
+                .build();
+        s3Client.deleteObject(deleteRequest);
+    }
+
+    // bucket 이름 getter
+    public String getBucketName() {
+        return bucket;
+    }
+
+    // region getter
+    public String getRegion() {
+        return region;
+    }
+
 }

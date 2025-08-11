@@ -10,7 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
+//import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -30,7 +30,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
-    private final RedisTemplate<String, String> redisTemplate;
+//    private final RedisTemplate<String, String> redisTemplate;
 
     /**
      * 요청이 들어올 때마다 한 번씩 실행되는 필터의 핵심 로직
@@ -56,13 +56,13 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        // ---  로그아웃된 토큰인지 확인 ---
+        /*// ---  로그아웃된 토큰인지 확인 ---
         String isLogout = redisTemplate.opsForValue().get(token);
         if (isLogout != null && isLogout.equals("logout")) {
             log.warn("이미 로그아웃된 토큰입니다.");
             filterChain.doFilter(request, response);
             return;
-        }
+        }*/
 
         try {
             // 토큰 만료 여부 확인

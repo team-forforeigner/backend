@@ -3,7 +3,7 @@ package com.codingrecipe.board.controller;
 
 import com.codingrecipe.board.dto.*;
 import com.codingrecipe.board.security.JwtUtil;
-import com.codingrecipe.board.service.LogoutService;
+//import com.codingrecipe.board.service.LogoutService;
 import com.codingrecipe.board.service.MemberService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ public class AuthController {
 
     // 의존성 주입
     private final MemberService memberService;
-    private final LogoutService logoutService;
+//    private final LogoutService logoutService;
     private final JwtUtil jwtUtil;
 
     @GetMapping("/me")
@@ -93,7 +93,7 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/logout")
+    /*@PostMapping("/logout")
     public ResponseEntity<String> logout(HttpServletRequest request) {
         // 로그아웃 처리 (JWT 토큰을 만료시키거나 블랙리스트에 추가)
         String token = jwtUtil.resolveToken(request); // 요청 헤더에서 JWT 토큰 추출
@@ -102,5 +102,5 @@ public class AuthController {
             logoutService.logout(token, expiration); // 토큰을 로그아웃 처리
         }
         return ResponseEntity.ok("성공적으로 로그아웃되었습니다");
-    }
+    }*/
 }

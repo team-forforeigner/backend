@@ -12,16 +12,17 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
-@Profile("!local") // 'local' 프로필이 아닐 때만 이 설정을 활성화
+//@Profile("!local") // 'local' 프로필이 아닐 때만 이 설정을 활성화
 @Configuration
 public class S3Config {
 
-    // application.yml 파일에서 값을 주입받음
+    // [시작] =========================================
     @Value("${cloud.aws.credentials.access-key}")
     private String accessKey; // AWS 액세스 키
 
     @Value("${cloud.aws.credentials.secret-key}")
     private String secretKey; // AWS 시크릿 키
+    // [끝] ===========================================
 
     @Value("${cloud.aws.region.static}")
     private String region; // AWS 리전(지역)
@@ -57,4 +58,6 @@ public class S3Config {
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 .build();
     }
+
+
 }

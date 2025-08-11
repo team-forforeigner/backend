@@ -243,4 +243,7 @@ public class BoardService {
     private BoardDTO convertToDto(BoardEntity board) {
         return BoardDTO.toBoardDTO(board);
     }
+
+
+
 }
