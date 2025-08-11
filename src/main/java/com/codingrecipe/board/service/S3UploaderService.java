@@ -108,8 +108,7 @@ public class S3UploaderService {
         } finally {
             // 업로드 성공/실패 여부와 관계없이 임시 파일 삭제
             if (tempFilePath != null) {
-                Files.deleteIfExists(tempFilePath);
-                log.info("로컬 임시 파일이 삭제되었습니다.");
+                removeNewFile(tempFilePath.toFile());
             }
         }
     }
@@ -124,6 +123,87 @@ public class S3UploaderService {
                 .build();
         s3Client.putObject(request, RequestBody.fromFile(uploadFile));
     }
+
+    /**
+     * S3에서 파일을 다운로드하여 로컬 임시 파일로 저장
+     */
+    /**
+     * S3에서 파일을 다운로드하여 로컬 임시 파일로 저장
+     * 사용이 끝나면 반드시 removeNewFile() 호출하여 삭제해야 함
+     */
+    public File download(String fileKey) {
+        if (fileKey == null || fileKey.isEmpty()) {
+            log.warn("파일 키가 null이거나 비어 있습니다.");
+            return null;
+        }
+        try {
+            // 임시 파일 생성 (확장자는 원본 key에서 가져오기)
+            String suffix = "";
+            int dotIndex = fileKey.lastIndexOf('.');
+            if (dotIndex > -1) {
+                suffix = fileKey.substring(dotIndex);
+            }
+            File tempFile = File.createTempFile("s3-download-", suffix);
+
+            // S3에서 파일 다운로드
+            s3Client.getObject(GetObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(fileKey)
+                    .build(), tempFile.toPath());
+
+            log.info("S3 파일 다운로드 완료: {}", tempFile.getAbsolutePath());
+            return tempFile;
+
+        } catch (IOException e) {
+            log.error("S3 파일 다운로드 중 오류 발생: {}", fileKey, e);
+            return null;
+        }
+    }
+
+    /**
+     * S3에서 파일 다운로드 후 바이트 배열로 반환
+     * 호출 후 임시 파일은 내부에서 삭제 처리
+     */
+    public byte[] getFileAsBytes(String fileKey) {
+        File tempFile = null;
+        try {
+            tempFile = download(fileKey);
+            if (tempFile == null || !tempFile.exists()) {
+                throw new IllegalArgumentException("파일이 존재하지 않습니다.");
+            }
+            return Files.readAllBytes(tempFile.toPath());
+        } catch (IOException e) {
+            log.error("파일 바이트 변환 실패: {}", fileKey, e);
+            throw new RuntimeException("파일 바이트 변환 실패", e);
+        } finally {
+            if (tempFile != null) {
+                removeNewFile(tempFile);
+            }
+        }
+    }
+
+    /**
+     * S3에서 파일 다운로드 후 콘텐츠 타입 반환
+     * 호출 후 임시 파일은 내부에서 삭제 처리
+     */
+    public String getFileContentType(String fileKey) {
+        File tempFile = null;
+        try {
+            tempFile = download(fileKey);
+            if (tempFile == null || !tempFile.exists()) {
+                throw new IllegalArgumentException("파일이 존재하지 않습니다.");
+            }
+            return Files.probeContentType(tempFile.toPath());
+        } catch (IOException e) {
+            log.error("파일 콘텐츠 타입 조회 실패: {}", fileKey, e);
+            throw new RuntimeException("파일 콘텐츠 타입 조회 실패", e);
+        } finally {
+            if (tempFile != null) {
+                removeNewFile(tempFile);
+            }
+        }
+    }
+
 
     /**
      * 업로드 과정에서 생성된 로컬 임시 파일을 삭제

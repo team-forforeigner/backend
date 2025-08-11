@@ -129,14 +129,24 @@ public class BoardService {
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 없습니다. id=" + id));
         BoardDTO boardDTO = BoardDTO.toBoardDTO(boardEntity);
 
-        // S3 서비스가 활성화되어 있고 파일이 첨부된 경우, 미리 서명된 URL 생성
+        /*// S3 서비스가 활성화되어 있고 파일이 첨부된 경우, 미리 서명된 URL 생성
         s3UploaderService.ifPresent(uploader -> {
             if (boardEntity.getFileAttached() == 1 && !boardEntity.getBoardFileEntityList().isEmpty()) {
                 String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
                 String fileUrl = uploader.generatePresignedUrl(storedFileName);
                 boardDTO.setFileUrl(fileUrl);
             }
-        });
+        });*/
+
+        // 파일 첨부 여부만 표시
+        if (boardEntity.getFileAttached() == 1) {
+            boardDTO.setFileAttached(1);
+        } else {
+            boardDTO.setFileAttached(0);
+        }
+        // 파일 URL 대신 null 또는 빈 문자열로 유지
+        boardDTO.setFileUrl(null);
+
         return boardDTO;
     }
 
