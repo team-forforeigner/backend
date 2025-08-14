@@ -4,7 +4,6 @@ package com.codingrecipe.board.dto;
 import com.codingrecipe.board.domain.Member;
 import com.codingrecipe.board.domain.Role;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-
 import java.util.Map;
 
 /**

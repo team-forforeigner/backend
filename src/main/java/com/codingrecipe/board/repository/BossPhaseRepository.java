@@ -4,7 +4,6 @@ package com.codingrecipe.board.repository;
 import com.codingrecipe.board.domain.BossPhase;
 import com.codingrecipe.board.domain.BossStage;
 import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.Optional;
 
 public interface BossPhaseRepository extends JpaRepository<BossPhase, Long> {

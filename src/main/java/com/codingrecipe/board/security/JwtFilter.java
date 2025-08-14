@@ -29,7 +29,6 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
-    // RedisTemplate 대신 LoggedOutTokenRepository를 주입받음
     private final LoggedOutTokenRepository loggedOutTokenRepository;
 
     @Override

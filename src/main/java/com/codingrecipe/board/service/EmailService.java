@@ -85,7 +85,6 @@ public class EmailService {
             // HTML 템플릿 파일 로드
             ClassPathResource resource = new ClassPathResource("templates/verification-email.html");
             String template = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            // 템플릿의 ${username}과 ${verificationLink} 부분을 실제 값으로 교체
             return template.replace("${username}", username)
                     .replace("${verificationLink}", verificationLink);
         } catch (IOException e) {

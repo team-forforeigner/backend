@@ -15,7 +15,6 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
     // --- [보스전] 신규 메서드 추가 ---
     // 특정 페이즈에 속한 모든 퀴즈를 조회
     List<Quiz> findByBossPhase(BossPhase bossPhase);
-    // --------------------------------
 
     // N+1 문제 해결을 위해 퀴즈와 선택지를 함께 조회 (fetch join)
     @Query("SELECT DISTINCT q FROM Quiz q LEFT JOIN FETCH q.choices WHERE q.id = :quizId")

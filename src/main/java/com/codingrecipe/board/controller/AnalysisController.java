@@ -29,13 +29,11 @@ public class AnalysisController {
     private final WebClient.Builder webClientBuilder;
     private final S3UploaderService s3UploaderService;
 
-    // --- application.yml에서 Cloudflare 서비스 토큰 정보 주입 ---
     @Value("${ai-server.access-client-id}")
     private String accessClientId;
 
     @Value("${ai-server.access-client-secret}")
     private String accessClientSecret;
-    // ----------------------------------------------------------------
 
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<FinalResponseDTO> analyzeImage(@RequestParam("image") MultipartFile imageFile) throws IOException {
@@ -54,7 +52,7 @@ public class AnalysisController {
                 // --- Cloudflare 인증 헤더 2개 추가 ---
                 .header("CF-Access-Client-Id", accessClientId)
                 .header("CF-Access-Client-Secret", accessClientSecret)
-                // -------------------------------------------
+
                 .body(BodyInserters.fromMultipartData(builder.build()))
                 .retrieve()
                 .bodyToMono(AnalysisResponse.class)
@@ -74,7 +72,7 @@ public class AnalysisController {
                             // --- Cloudflare 인증 헤더 2개 추가 ---
                             .header("CF-Access-Client-Id", accessClientId)
                             .header("CF-Access-Client-Secret", accessClientSecret)
-                            // -------------------------------------------
+
                             .body(BodyInserters.fromValue("{\"object_name\":\"" + targetObject + "\"}"))
                             .retrieve()
                             .bodyToMono(String.class)
