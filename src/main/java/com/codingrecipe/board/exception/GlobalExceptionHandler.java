@@ -2,6 +2,8 @@ package com.codingrecipe.board.exception;
 
 import com.codingrecipe.board.dto.ApiResponse;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -14,6 +16,7 @@ import java.util.Arrays;
  * 설명 : 전역 예외 처리 핸들러 클래스입니다.
 */
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -56,13 +59,21 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(HttpStatus.BAD_REQUEST.value(), "요청 데이터 형식이 올바르지 않습니다."));
     }
 
-    // 그 외 예상 못한 예외
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<?>> handleException(Exception ex) {
-        // 로그 남기기
-        ex.printStackTrace();
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.fail(HttpStatus.INTERNAL_SERVER_ERROR.value(), "서버에서 오류가 발생했습니다."));
+    public ResponseEntity<ErrorResponse> handleException(Exception e, HttpServletRequest request) {
+        log.error("Unhandled Exception: {}, URL: {}", e.getMessage(), request.getRequestURI(), e);
+        ErrorResponse errorResponse = new ErrorResponse(ErrorCode.INTERNAL_SERVER_ERROR, request.getRequestURI());
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<ErrorResponse> handleCustomException(CustomException e, HttpServletRequest request) {
+        log.error("CustomException: {}, URL: {}", e.getErrorCode().getMessage(), request.getRequestURI());
+        ErrorResponse errorResponse = new ErrorResponse(e.getErrorCode(), request.getRequestURI());
+        return ResponseEntity
+                .status(e.getErrorCode().getStatus())
+                .body(errorResponse);
     }
 
 }

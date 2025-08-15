@@ -1,4 +1,3 @@
-// 회원 가입, 로그인, 정보 수정 등 회원 관련 비즈니스 로직을 처리하는 서비스
 package com.codingrecipe.board.service;
 
 import com.codingrecipe.board.domain.Member;
@@ -7,6 +6,8 @@ import com.codingrecipe.board.dto.EmailRequestDto;
 import com.codingrecipe.board.dto.PasswordChangeRequest;
 import com.codingrecipe.board.dto.SignUpRequestDto;
 import com.codingrecipe.board.dto.UserInfoDto;
+import com.codingrecipe.board.exception.CustomException;
+import com.codingrecipe.board.exception.ErrorCode;
 import com.codingrecipe.board.repository.MemberRepository;
 import com.codingrecipe.board.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -31,27 +32,23 @@ public class MemberService {
      * 회원가입 처리 로직
      */
     public void join(SignUpRequestDto dto) {
-        // 비밀번호와 비밀번호 확인이 일치하는지 검사
         if (!dto.getPassword().equals(dto.getPasswordCheck())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다");
+            throw new CustomException(ErrorCode.INVALID_PASSWORD);
         }
         Optional<Member> existingMemberOpt = memberRepository.findByEmail(dto.getEmail());
         if (existingMemberOpt.isPresent()) {
             Member existingMember = existingMemberOpt.get();
-            // 이미 이메일 인증까지 완료된 경우
             if (existingMember.isEmailVerified()) {
-                throw new IllegalStateException("이미 가입이 완료된 이메일입니다");
+                throw new CustomException(ErrorCode.ALREADY_EXIST_EMAIL);
             } else {
-                // 이메일 인증을 완료하지 않은 사용자가 다시 가입을 시도하는 경우
                 updateUnverifiedMember(existingMember, dto);
-                emailService.sendVerificationEmail(existingMember); // 인증 메일 재전송
+                emailService.sendVerificationEmail(existingMember);
                 return;
             }
         }
-        // 신규 회원인 경우
         Member newMember = createNewMember(dto);
         Member savedMember = memberRepository.save(newMember);
-        emailService.sendVerificationEmail(savedMember); // 인증 메일 발송
+        emailService.sendVerificationEmail(savedMember);
     }
 
     /**
@@ -60,7 +57,7 @@ public class MemberService {
     private void updateUnverifiedMember(Member member, SignUpRequestDto dto) {
         member.setPassword(passwordEncoder.encode(dto.getPassword()));
         member.setNationality(dto.getNationality());
-        member.setNickname(dto.getEmail()); // 초기 닉네임을 이메일로 설정
+        member.setNickname(dto.getEmail());
     }
 
     /**
@@ -70,7 +67,7 @@ public class MemberService {
         return Member.builder()
                 .email(dto.getEmail())
                 .password(passwordEncoder.encode(dto.getPassword()))
-                .nickname(dto.getEmail()) // 초기 닉네임을 이메일로 설정
+                .nickname(dto.getEmail())
                 .nationality(dto.getNationality())
                 .role(Role.USER)
                 .emailVerified(false)
@@ -83,7 +80,7 @@ public class MemberService {
     public void verifyEmailByToken(String token) {
         String email = jwtUtil.getEmail(token);
         Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         member.setEmailVerified(true);
     }
 
@@ -93,14 +90,14 @@ public class MemberService {
     @Transactional(readOnly = true)
     public String login(String email, String password) {
         Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다"));
-        // 비밀번호 일치 여부 확인
+                .orElseThrow(() -> new CustomException(ErrorCode.LOGIN_FAILED));
+
         if (!passwordEncoder.matches(password, member.getPassword())) {
-            throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다");
+            throw new CustomException(ErrorCode.LOGIN_FAILED);
         }
-        // 이메일 인증 완료 여부 확인
+
         if (!member.isEmailVerified()) {
-            throw new IllegalStateException("이메일 인증이 완료되지 않았습니다");
+            throw new CustomException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
         return jwtUtil.generateToken(member.getEmail());
     }
@@ -110,9 +107,9 @@ public class MemberService {
      */
     public void sendTempPassword(EmailRequestDto dto) {
         Member member = memberRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("입력하신 이메일로 가입된 사용자가 없습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         String tempPassword = emailService.createCode();
-        member.setPassword(passwordEncoder.encode(tempPassword)); // 임시 비밀번호로 변경
+        member.setPassword(passwordEncoder.encode(tempPassword));
         emailService.sendTempPasswordEmail(dto.getEmail(), tempPassword);
     }
 
@@ -121,15 +118,13 @@ public class MemberService {
      */
     public void changePassword(String email, PasswordChangeRequest dto) {
         Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 현재 비밀번호 일치 여부 확인
         if (!passwordEncoder.matches(dto.getCurrentPassword(), member.getPassword())) {
-            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다");
+            throw new CustomException(ErrorCode.INVALID_PASSWORD);
         }
-        // 새 비밀번호와 확인용 비밀번호 일치 여부 확인
         if (!dto.getNewPassword().equals(dto.getNewPasswordCheck())) {
-            throw new IllegalArgumentException("새 비밀번호가 일치하지 않습니다");
+            throw new CustomException(ErrorCode.INVALID_PASSWORD);
         }
         member.setPassword(passwordEncoder.encode(dto.getNewPassword()));
     }
@@ -140,7 +135,7 @@ public class MemberService {
     @Transactional(readOnly = true)
     public UserInfoDto getMemberInfoByEmail(String email) {
         Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("사용자 정보를 찾을 수 없습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         return new UserInfoDto(member);
     }
 
@@ -150,7 +145,7 @@ public class MemberService {
     @Transactional(readOnly = true)
     public Member findMemberByEmail(String email) {
         return memberRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 
     /**
