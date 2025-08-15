@@ -1,6 +1,7 @@
 // AWS S3 파일 업로드 및 Presigned URL 생성을 처리하는 서비스
 package com.codingrecipe.board.service;
 
+import com.codingrecipe.board.util.FileUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,9 +18,12 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Slf4j
@@ -31,10 +35,10 @@ public class S3UploaderService {
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
 
-    @Value("${cloud.aws.s3.bucket-name}")
+    @Value("${spring.cloud.aws.s3.bucket-name}")
     private String bucket; // S3 버킷 이름
 
-    @Value("${cloud.aws.region.static}")
+    @Value("${spring.cloud.aws.region.static}")
     private String region; // 주입받음
 
     /**
@@ -67,32 +71,24 @@ public class S3UploaderService {
     }
 
     /**
-     * MultipartFile을 받아 S3에 업로드하고 로컬 임시 파일을 삭제
+     * 스트림 형식의 MultipartFile을 S3에 업로드
      */
-    public String upload(MultipartFile multipartFile, String dirName) throws IOException {
-        Path tempFilePath = null;
-        try {
-            // 시스템 기본 임시 디렉토리에 임시 파일 생성
-            tempFilePath = Files.createTempFile("s3-upload-", multipartFile.getOriginalFilename());
+    public String upload(MultipartFile file, String category) throws IOException {
+        String uuid = UUID.randomUUID().toString();
+        String extension = FileUtil.getFileExtension(file.getOriginalFilename());
+        String yyyyMM = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
+        String key = String.format("uploads/%s/%s/%s%s", category, yyyyMM, uuid, extension);
 
-            // MultipartFile의 내용을 임시 파일에 씁니다.
-            multipartFile.transferTo(tempFilePath);
-            File uploadFile = tempFilePath.toFile();
-
-            // S3에 업로드할 파일 이름 생성
-            String fileName = dirName + "/" + UUID.randomUUID() + "_" + uploadFile.getName();
-
-            // S3에 파일 업로드
-            putS3(uploadFile, fileName);
-
-            // S3에 저장된 파일 경로(key) 반환
-            return fileName;
-        } finally {
-            // 업로드 성공/실패 여부와 관계없이 임시 파일 삭제
-            if (tempFilePath != null) {
-                removeNewFile(tempFilePath.toFile());
-            }
+        try (InputStream is = file.getInputStream()) {
+            s3Client.putObject(PutObjectRequest.builder()
+                            .bucket(bucket)
+                            .key(key)
+                            .contentType(file.getContentType())
+                            .build(),
+                    RequestBody.fromInputStream(is, file.getSize()));
         }
+
+        return key;
     }
 
     /**
@@ -107,84 +103,37 @@ public class S3UploaderService {
     }
 
     /**
-     * S3에서 파일을 다운로드하여 로컬 임시 파일로 저장
+     * S3에서 파일을 다운로드하고 InputStream(바이트)으로 반환
      */
-    /**
-     * S3에서 파일을 다운로드하여 로컬 임시 파일로 저장
-     * 사용이 끝나면 반드시 removeNewFile() 호출하여 삭제해야 함
-     */
-    public File download(String fileKey) {
+    public byte[] downloadAsBytes(String fileKey) {
         if (fileKey == null || fileKey.isEmpty()) {
             log.warn("파일 키가 null이거나 비어 있습니다.");
-            return null;
+            return new byte[0];
         }
-        try {
-            // 임시 파일 생성 (확장자는 원본 key에서 가져오기)
-            String suffix = "";
-            int dotIndex = fileKey.lastIndexOf('.');
-            if (dotIndex > -1) {
-                suffix = fileKey.substring(dotIndex);
-            }
-            File tempFile = File.createTempFile("s3-download-", suffix);
-
-            // S3에서 파일 다운로드
-            s3Client.getObject(GetObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(fileKey)
-                    .build(), tempFile.toPath());
-
-            log.info("S3 파일 다운로드 완료: {}", tempFile.getAbsolutePath());
-            return tempFile;
-
+        try (InputStream in = s3Client.getObject(GetObjectRequest.builder()
+                .bucket(bucket)
+                .key(fileKey)
+                .build())) {
+            return in.readAllBytes();
         } catch (IOException e) {
             log.error("S3 파일 다운로드 중 오류 발생: {}", fileKey, e);
-            return null;
+            throw new RuntimeException("파일 다운로드 실패", e);
         }
     }
 
     /**
-     * S3에서 파일 다운로드 후 바이트 배열로 반환
-     * 호출 후 임시 파일은 내부에서 삭제 처리
-     */
-    public byte[] getFileAsBytes(String fileKey) {
-        File tempFile = null;
-        try {
-            tempFile = download(fileKey);
-            if (tempFile == null || !tempFile.exists()) {
-                throw new IllegalArgumentException("파일이 존재하지 않습니다.");
-            }
-            return Files.readAllBytes(tempFile.toPath());
-        } catch (IOException e) {
-            log.error("파일 바이트 변환 실패: {}", fileKey, e);
-            throw new RuntimeException("파일 바이트 변환 실패", e);
-        } finally {
-            if (tempFile != null) {
-                removeNewFile(tempFile);
-            }
-        }
-    }
-
-    /**
-     * S3에서 파일 다운로드 후 콘텐츠 타입 반환
-     * 호출 후 임시 파일은 내부에서 삭제 처리
+     * 확장자에 따라 파일의 Content-Type을 반환
      */
     public String getFileContentType(String fileKey) {
-        File tempFile = null;
-        try {
-            tempFile = download(fileKey);
-            if (tempFile == null || !tempFile.exists()) {
-                throw new IllegalArgumentException("파일이 존재하지 않습니다.");
-            }
-            return Files.probeContentType(tempFile.toPath());
-        } catch (IOException e) {
-            log.error("파일 콘텐츠 타입 조회 실패: {}", fileKey, e);
-            throw new RuntimeException("파일 콘텐츠 타입 조회 실패", e);
-        } finally {
-            if (tempFile != null) {
-                removeNewFile(tempFile);
-            }
-        }
+        String extension = FileUtil.getFileExtension(fileKey);
+        return switch (extension.toLowerCase()) {
+            case ".jpg", ".jpeg" -> "image/jpeg";
+            case ".png" -> "image/png";
+            case ".gif" -> "image/gif";
+            default -> "application/octet-stream";
+        };
     }
+
 
 
     /**

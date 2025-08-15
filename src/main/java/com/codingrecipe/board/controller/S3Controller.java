@@ -1,6 +1,7 @@
 package com.codingrecipe.board.controller;
 
 import com.codingrecipe.board.service.S3UploaderService;
+import com.codingrecipe.board.util.FileUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
@@ -13,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
@@ -34,35 +36,52 @@ public class S3Controller {
     /**
      * 이미지 업로드
      */
-    @PostMapping
-    public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) throws IOException {
-        String key = s3UploaderService.upload(file, "uploads"); // dirName은 원하는 경로
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadImage(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("category") String category) throws IOException {
+
+        // 허용 카테고리 검증
+        List<String> allowedCategories = List.of("community", "profile", "banner");
+        if (!allowedCategories.contains(category.toLowerCase())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid category"));
+        }
+
+        String key = s3UploaderService.upload(file, category);
+
         String url = String.format("https://%s.s3.%s.amazonaws.com/%s",
                 s3UploaderService.getBucketName(),
                 s3UploaderService.getRegion(),
                 key);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("url", url, "key", key));
     }
 
+
     /**
-     * 이미지 다운로드
+     * 통합 조회/다운로드
      */
-    @GetMapping("/{fileKey}")
-    public ResponseEntity<ByteArrayResource> downloadImage(@PathVariable String fileKey) {
-        byte[] data = s3UploaderService.getFileAsBytes(fileKey);
+    @GetMapping("/image")
+    public ResponseEntity<ByteArrayResource> getImage(
+            @RequestParam String fileKey,
+            @RequestParam(defaultValue = "inline") String disposition) {
+
+        byte[] data = s3UploaderService.downloadAsBytes(fileKey);
         ByteArrayResource resource = new ByteArrayResource(data);
 
         String contentType = s3UploaderService.getFileContentType(fileKey);
-        String encodedName = URLEncoder.encode(fileKey, StandardCharsets.UTF_8);
+        String fileName = FileUtil.getBaseName(fileKey);
+        String encodedName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + encodedName + "\"")
+                .contentType(MediaType.parseMediaType(contentType != null ? contentType : "application/octet-stream"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition + "; filename=\"" + encodedName + "\"")
                 .body(resource);
     }
 
     /**
      * 이미지 수정(교체)
+     * - 기존 이미지를 삭제하고 새로운 이미지를 업로드합니다.
      */
     @PutMapping("/{fileKey}")
     public ResponseEntity<?> updateImage(@PathVariable String fileKey,
@@ -84,4 +103,5 @@ public class S3Controller {
         s3UploaderService.deleteFile(fileKey);
         return ResponseEntity.noContent().build();
     }
+
 }
