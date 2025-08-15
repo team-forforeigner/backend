@@ -76,7 +76,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://forforeigner.com.s3-website.ap-northeast-2.amazonaws.com",
                 "https://forforeigner.site",
-                "https://ai.navoodiai.site"
+                "https://ai.navoodiai.site",
                 "https://forforeigner.site",
                 "http://forforeigner.site",
 
