@@ -52,6 +52,10 @@ public class SecurityConfig {
                 .requestMatchers("/login/oauth2/**", "/oauth-redirect").permitAll()
                 // 게시판 조회는 누구나 가능
                 .requestMatchers(HttpMethod.GET, "/api/boards", "/api/boards/**").permitAll()
+                // 이미지 분석은 누구나 가능 (임시)
+                .requestMatchers(HttpMethod.POST, "/api/analyze").permitAll()
+                // 팁 조회는 누구나 가능
+                .requestMatchers(HttpMethod.GET, "/api/tips").permitAll()
                 // 위에서 지정하지 않은 나머지 모든 API는 인증(로그인)이 필요함
                 .anyRequest().authenticated());
 
@@ -71,7 +75,8 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://forforeigner.com.s3-website.ap-northeast-2.amazonaws.com",
-                "https://forforeigner.site"
+                "https://forforeigner.site",
+                "https://ai.navoodiai.site"
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
