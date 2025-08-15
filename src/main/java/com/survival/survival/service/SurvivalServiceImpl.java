@@ -25,19 +25,22 @@ public class SurvivalServiceImpl implements SurvivalService {
     private final ChoicesRepository choicesRepository;
     private final UserProgressRepository userProgressRepository;
     private final UserSeriesCompletionRepository userSeriesCompletionRepository;
+    private final UserLevelRepository userLevelRepository;
 
     public SurvivalServiceImpl(CategoryRepository categoryRepository,
                                SeriesRepository seriesRepository,
                                EpisodesRepository episodesRepository,
                                ChoicesRepository choicesRepository,
                                UserProgressRepository userProgressRepository,
-                               UserSeriesCompletionRepository userSeriesCompletionRepository) {
+                               UserSeriesCompletionRepository userSeriesCompletionRepository,
+                               UserLevelRepository userLevelRepository) {
         this.categoryRepository = categoryRepository;
         this.seriesRepository = seriesRepository;
         this.episodesRepository = episodesRepository;
         this.choicesRepository = choicesRepository;
         this.userProgressRepository = userProgressRepository;
         this.userSeriesCompletionRepository = userSeriesCompletionRepository;
+        this.userLevelRepository = userLevelRepository;
     }
 
     @Override
@@ -148,4 +151,54 @@ public class SurvivalServiceImpl implements SurvivalService {
         userProgressRepository.deleteByUserIdAndSeriesId(userId, seriesId);
         return true;
     }
+
+    @Override
+    public Optional<UserLevelDTO> getUserLevel(Long userId){
+        return userLevelRepository.findByUserId(userId)
+                .map(userLevelEntity -> UserLevelDTO.builder()
+                        .userId(userLevelEntity.getUserId())
+                        .completedSeriesCount(userLevelEntity.getCompletedSeriesCount())
+                        .levelName(userLevelEntity.getLevelName())
+                        .build());
+    }
+
+    // LevelSystem에 사용될 메서드: 시리즈 개수에 따른 레벨 이름 반환
+    private String getLevelName(int completedCount){
+        if(completedCount>=6){
+            return "Lv3.III";
+        } else if (completedCount>=3){
+            return "Lv2.II";
+        } else if (completedCount>=1){
+            return "Lv1.I";
+        } else {
+            return "NONE";
+        }
+    }
+
+    // LevelSystem
+     private void updateUserLv(Long userId){
+        //완료한 시리즈 개수 조회(확인)
+        List<UserSeriesCompletionEntity> completedSeriesList = userSeriesCompletionRepository.findByUserId(userId);
+        int completedCount = completedSeriesList.size();
+
+        //Level finding
+        String newLevelName = getLevelName(completedCount);
+
+         // Level info update
+         Optional<UserLevelEntity> userLevelOptional = userLevelRepository.findByUserId(userId);
+         if (userLevelOptional.isPresent()){
+             UserLevelEntity userLevel = userLevelOptional.get();
+             userLevel.updateLevel(completedCount, newLevelName);
+             userLevelRepository.save(userLevel);
+         } else {
+             // Level info generate
+             UserLevelEntity newUserLevel = UserLevelEntity.builder()
+                     .userId(userId)
+                     .completedSeriesCount(completedCount)
+                     .levelName(newLevelName)
+                     .build();
+             userLevelRepository.save(newUserLevel);
+         }
+
+     }
 }

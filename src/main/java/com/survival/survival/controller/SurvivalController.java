@@ -1,15 +1,13 @@
 package com.survival.survival.controller;
 
-import com.survival.DTO.ChoiceClickResponseDTO;
-import com.survival.DTO.EpisodeHistoryDTO;
-import com.survival.DTO.EpisodeResponseDTO;
-import com.survival.DTO.SeriesListResponseDTO;
+import com.survival.DTO.*;
 import com.survival.survival.service.SurvivalService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 // api 컨트롤러
 
@@ -19,7 +17,7 @@ public class SurvivalController {
 
     private final SurvivalService survivalService;
 
-    // 생성자 주입을 통해 SurvivalService 의존성을 주입
+    //SurvivalService 의존성 주입
     public SurvivalController(SurvivalService survivalService) {
         this.survivalService = survivalService;
     }
@@ -90,4 +88,16 @@ public class SurvivalController {
             return new ResponseEntity<>("시리즈 상태 초기화 중 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    // 레벨 정보 조회 API
+    // GET /api/survival/level
+    @GetMapping("/level")
+    public ResponseEntity<UserLevelDTO> getUserLevel(@RequestParam Long userId){
+        Optional<UserLevelDTO> userLevelOptional = survivalService.getUserLevel(userId);
+        return userLevelOptional.map(userLevelDTO-> new ResponseEntity<>(userLevelDTO, HttpStatus.OK))
+                .orElseGet(()-> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+
+    }
+
+
 }

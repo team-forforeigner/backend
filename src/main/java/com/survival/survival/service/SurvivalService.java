@@ -1,11 +1,9 @@
 package com.survival.survival.service;
 
-import com.survival.DTO.ChoiceClickResponseDTO;
-import com.survival.DTO.EpisodeHistoryDTO;
-import com.survival.DTO.EpisodeResponseDTO;
-import com.survival.DTO.SeriesListResponseDTO;
+import com.survival.DTO.*;
 
 import java.util.List;
+import java.util.Optional;
 
 //  서비스 인터페이스
 
@@ -24,4 +22,6 @@ public interface SurvivalService {
     boolean completeSeries(Long userId, Long seriesId);
 
     boolean resetSeries(Long userId, Long seriesId);
+
+    Optional<UserLevelDTO>getUserLevel(Long userId);
 }
