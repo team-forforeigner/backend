@@ -44,6 +44,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
+        // HTTPS로 리디렉션 방지
+        http.requiresChannel(channel -> channel.anyRequest().requiresInsecure());
+
+
         // --- API 경로별 접근 권한 규칙을 더 세분화 ---
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
