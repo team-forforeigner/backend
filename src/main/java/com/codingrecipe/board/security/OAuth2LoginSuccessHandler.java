@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -20,6 +21,9 @@ import java.nio.charset.StandardCharsets;
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtUtil jwtUtil;
+
+    @Value("${app.redirect-url}")
+    private String redirectUrl;
 
     /**
      * OAuth2 인증 성공 시 호출되는 메서드
@@ -38,7 +42,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         log.info("발급된 JWT 토큰: {}", token);
 
         // 프론트엔드 리다이렉트 URL에 토큰을 쿼리 파라미터로 추가
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/oauth-redirect")
+        String targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
                 .queryParam("token", token)
                 .build()
                 .encode(StandardCharsets.UTF_8)
