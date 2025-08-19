@@ -40,7 +40,7 @@ public class AnalysisController {
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<FinalResponseDTO> analyzeImage(@RequestParam("image") MultipartFile imageFile) throws IOException {
 
-        String s3Url = s3UploaderService.upload(imageFile, "images");
+        String s3Url = s3UploaderService.uploadImage(imageFile, "images");
         System.out.println("S3 업로드 완료. URL: " + s3Url);
 
         WebClient webClient = webClientBuilder.baseUrl("https://ai.navoodiai.site").build();

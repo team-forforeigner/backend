@@ -45,7 +45,7 @@ public class BannerService {
                 // S3 서비스가 있을 경우: 파일을 S3에 업로드하고 URL을 가져옴
                 uploader -> {
                     try {
-                        String imageUrl = uploader.upload(imageFile, "banners");
+                        String imageUrl = uploader.uploadImage(imageFile, "banners");
                         bannerEntity.setImageUrl(imageUrl);
                     } catch (IOException e) {
                         log.error("S3 파일 업로드 중 오류 발생", e);
@@ -79,7 +79,7 @@ public class BannerService {
             s3UploaderService.ifPresent(uploader -> {
                 try {
                     // TODO: 기존 S3 이미지 삭제 로직 필요
-                    String newImageUrl = uploader.upload(imageFile, "banners");
+                    String newImageUrl = uploader.uploadImage(imageFile, "banners");
                     bannerEntity.setImageUrl(newImageUrl);
                 } catch (IOException e) {
                     log.error("S3 파일 업로드 중 오류 발생", e);

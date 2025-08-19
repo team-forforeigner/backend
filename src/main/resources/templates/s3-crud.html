@@ -26,9 +26,7 @@
           gap: 10px;
           align-items: center;
         }
-        #uploadForm input[type="file"] {
-          flex-grow: 1;
-        }
+        #uploadForm input[type="file"] { flex-grow: 1; }
         #uploadForm button {
           background: #4caf50;
           color: white;
@@ -37,10 +35,7 @@
           border-radius: 5px;
           cursor: pointer;
         }
-        #uploadForm button:hover {
-          background: #45a049;
-        }
-
+        #uploadForm button:hover { background: #45a049; }
         #imageGrid {
           max-width: 960px;
           margin: 0 auto 50px auto;
@@ -84,9 +79,7 @@
           flex-direction: column;
           gap: 6px;
         }
-        .actions input[type="file"] {
-          width: 100%;
-        }
+        .actions input[type="file"] { width: 100%; }
         .actions button {
           width: 100%;
           padding: 6px;
@@ -95,29 +88,13 @@
           cursor: pointer;
           font-weight: 600;
         }
-        .actions button.update-btn {
-          background: #2196f3;
-          color: white;
-        }
-        .actions button.update-btn:hover {
-          background: #1976d2;
-        }
-        .actions button.delete-btn {
-          background: #f44336;
-          color: white;
-        }
-        .actions button.delete-btn:hover {
-          background: #c62828;
-        }
-
+        .actions button.update-btn { background: #2196f3; color: white; }
+        .actions button.update-btn:hover { background: #1976d2; }
+        .actions button.delete-btn { background: #f44336; color: white; }
+        .actions button.delete-btn:hover { background: #c62828; }
         @media(max-width: 480px) {
-          #uploadForm {
-            flex-direction: column;
-            gap: 8px;
-          }
-          #uploadForm button {
-            width: 100%;
-          }
+          #uploadForm { flex-direction: column; gap: 8px; }
+          #uploadForm button { width: 100%; }
         }
     </style>
 </head>
@@ -144,128 +121,117 @@
 </select>
 <button onclick="loadByCategory()">조회</button>
 
-<div id="imageGrid">
-    <!-- 이미지 카드가 여기 동적 생성됨 -->
-</div>
+<div id="imageGrid"></div>
 
 <script>
     const apiBase = '/api/s3';
-
     const uploadForm = document.getElementById('uploadForm');
     const imageGrid = document.getElementById('imageGrid');
 
-    // 이미지 목록 로드 및 화면에 렌더링
+    // 이미지 목록 로드
     async function loadImages() {
-      imageGrid.innerHTML = '로딩 중...';
-      try {
-        const res = await fetch(apiBase);
-        if (!res.ok) throw new Error('이미지 목록 불러오기 실패');
-        const images = await res.json();
+        imageGrid.innerHTML = '로딩 중...';
+        try {
+            const res = await fetch(`${apiBase}/list`);
+            if (!res.ok) throw new Error('이미지 목록 불러오기 실패');
+            const images = await res.json();
 
-        if (!images.length) {
-          imageGrid.innerHTML = '<p style="text-align:center; color:#777;">등록된 이미지가 없습니다.</p>';
-          return;
+            if (!images.length) {
+                imageGrid.innerHTML = '<p style="text-align:center; color:#777;">등록된 이미지가 없습니다.</p>';
+                return;
+            }
+
+            imageGrid.innerHTML = '';
+            images.forEach(image => {
+                const card = document.createElement('div');
+                card.className = 'image-card';
+
+                const img = document.createElement('img');
+                img.src = `${apiBase}/image?fileKey=${encodeURIComponent(image.filename)}`;
+                img.alt = image.filename;
+
+                const filename = document.createElement('div');
+                filename.className = 'filename';
+                filename.textContent = image.filename;
+
+                const fileInfo = document.createElement('div');
+                fileInfo.className = 'file-info';
+                fileInfo.textContent = `크기: ${image.size} bytes\n수정일: ${image.lastModified}`;
+
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+
+                const updateBtn = document.createElement('button');
+                updateBtn.textContent = '수정';
+                updateBtn.className = 'update-btn';
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '삭제';
+                deleteBtn.className = 'delete-btn';
+
+                const actions = document.createElement('div');
+                actions.className = 'actions';
+                actions.appendChild(fileInput);
+                actions.appendChild(updateBtn);
+                actions.appendChild(deleteBtn);
+
+                card.appendChild(img);
+                card.appendChild(filename);
+                card.appendChild(fileInfo);
+                card.appendChild(actions);
+                imageGrid.appendChild(card);
+
+                // 수정 이벤트
+                updateBtn.onclick = async () => {
+                    if (!fileInput.files.length) {
+                        alert('교체할 이미지를 선택하세요.');
+                        return;
+                    }
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
+
+                    try {
+                        const res = await fetch(`${apiBase}/update?fileKey=${encodeURIComponent(image.filename)}&category=profile`, {
+                            method: 'PUT',
+                            body: formData,
+                        });
+                        if (!res.ok) throw new Error('수정 실패');
+                        const data = await res.json();
+                        alert(`수정 성공, 새 fileKey: ${data.fileKey}`);
+                        fileInput.value = '';
+                        await loadImages();
+                    } catch (err) {
+                        alert(err.message || '수정 실패');
+                    }
+                };
+
+                // 삭제 이벤트
+                deleteBtn.onclick = async () => {
+                    if (!confirm(`정말 '${image.filename}' 을 삭제하시겠습니까?`)) return;
+                    try {
+                        const res = await fetch(`${apiBase}/delete?fileKey=${encodeURIComponent(image.filename)}`, {
+                            method: 'DELETE',
+                        });
+                        if (!res.ok) throw new Error('삭제 실패');
+                        alert('삭제 성공');
+                        await loadImages();
+                    } catch (err) {
+                        alert(err.message || '삭제 실패');
+                    }
+                };
+            });
+        } catch (error) {
+            imageGrid.innerHTML = `<p style="color:red; text-align:center;">${error.message}</p>`;
         }
-
-        imageGrid.innerHTML = '';
-
-        images.forEach(image => {
-          const card = document.createElement('div');
-          card.className = 'image-card';
-
-          const img = document.createElement('img');
-          img.src = `${apiBase}/image?fileKey=${encodeURIComponent(image.filename)}`;
-          img.alt = image.filename;
-
-          const filename = document.createElement('div');
-          filename.className = 'filename';
-          filename.textContent = image.filename;
-
-          const fileInfo = document.createElement('div');
-          fileInfo.className = 'file-info';
-          fileInfo.textContent = `크기: ${image.size} bytes\n수정일: ${image.lastModified}`;
-
-          // 수정 파일 input
-          const fileInput = document.createElement('input');
-          fileInput.type = 'file';
-
-          // 수정 버튼
-          const updateBtn = document.createElement('button');
-          updateBtn.textContent = '수정';
-          updateBtn.className = 'update-btn';
-
-          // 삭제 버튼
-          const deleteBtn = document.createElement('button');
-          deleteBtn.textContent = '삭제';
-          deleteBtn.className = 'delete-btn';
-
-          // 버튼 컨테이너
-          const actions = document.createElement('div');
-          actions.className = 'actions';
-          actions.appendChild(fileInput);
-          actions.appendChild(updateBtn);
-          actions.appendChild(deleteBtn);
-
-          card.appendChild(img);
-          card.appendChild(filename);
-          card.appendChild(fileInfo);
-          card.appendChild(actions);
-          imageGrid.appendChild(card);
-
-          // 수정 이벤트
-          updateBtn.onclick = async () => {
-            if (!fileInput.files.length) {
-              alert('교체할 이미지를 선택하세요.');
-              return;
-            }
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            try {
-              const res = await fetch(`${apiBase}/${encodeURIComponent(image.filename)}`, {
-                method: 'PUT',
-                body: formData,
-              });
-              if (!res.ok) throw new Error('수정 실패');
-              alert('수정 성공');
-              fileInput.value = '';
-              await loadImages();
-            } catch (err) {
-              alert(err.message || '수정 실패');
-            }
-          };
-
-          // 삭제 이벤트
-          deleteBtn.onclick = async () => {
-            if (!confirm(`정말 '${image.filename}' 를 삭제하시겠습니까?`)) return;
-
-            try {
-              const res = await fetch(`${apiBase}/${encodeURIComponent(image.filename)}`, {
-                method: 'DELETE',
-              });
-              if (!res.ok) throw new Error('삭제 실패');
-              alert('삭제 성공');
-              await loadImages();
-            } catch (err) {
-              alert(err.message || '삭제 실패');
-            }
-          };
-        });
-
-      } catch (error) {
-        imageGrid.innerHTML = `<p style="color:red; text-align:center;">${error.message}</p>`;
-      }
     }
 
     // 업로드 처리
     uploadForm.onsubmit = async e => {
         e.preventDefault();
-
         const fileInput = uploadForm.querySelector('input[type="file"]');
         const categorySelect = uploadForm.querySelector('select[name="category"]');
         const file = fileInput.files[0];
         const category = categorySelect.value;
-
         if (!file || !category) {
             alert("파일과 카테고리를 선택하세요.");
             return;
@@ -273,52 +239,51 @@
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('category', category);
 
         try {
-            const res = await fetch('/api/s3/upload', {
+            const res = await fetch(`${apiBase}/upload?category=${encodeURIComponent(category)}`, {
                 method: 'POST',
                 body: formData
             });
             if (!res.ok) throw new Error('업로드 실패');
-
-            alert('업로드 성공');
+            const data = await res.json();
+            alert(`업로드 성공, fileKey: ${data.fileKey}`);
             uploadForm.reset();
-            // 기존 loadImages() 호출 가능
             await loadImages();
         } catch (err) {
             alert(err.message || '업로드 실패');
         }
     };
 
+    // 카테고리별 조회
+    async function loadByCategory() {
+        const category = document.getElementById('categorySelect').value;
+        if (!category) return alert("카테고리를 선택하세요.");
+        try {
+            const res = await fetch(`${apiBase}/list?category=${encodeURIComponent(category)}`);
+            if (!res.ok) throw new Error("조회 실패");
+            const images = await res.json();
+            imageGrid.innerHTML = '';
+            images.forEach(img => {
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                const image = document.createElement('img');
+                image.src = img.url + '&disposition=inline';
+                image.alt = img.filename;
+                const dlBtn = document.createElement('button');
+                dlBtn.textContent = '다운로드';
+                dlBtn.onclick = () => window.open(img.url + '&disposition=attachment', '_blank');
+                card.appendChild(image);
+                card.appendChild(dlBtn);
+                imageGrid.appendChild(card);
+            });
+        } catch (err) {
+            alert(err.message || '조회 실패');
+        }
+    }
+
     // 초기 로드
     window.onload = loadImages;
-
-    async function loadByCategory() {
-    const category = document.getElementById('categorySelect').value;
-    if (!category) return alert("카테고리를 선택하세요.");
-
-    const res = await fetch(`/api/s3/list?category=${category}`);
-    if (!res.ok) return alert("조회 실패");
-
-    const images = await res.json();
-    const grid = document.getElementById('imageGrid');
-    grid.innerHTML = '';
-
-    images.forEach(img => {
-        const card = document.createElement('div');
-        const image = document.createElement('img');
-        image.src = img.url + '&disposition=inline';
-        const dlBtn = document.createElement('button');
-        dlBtn.textContent = '다운로드';
-        dlBtn.onclick = () => window.open(img.url + '&disposition=attachment', '_blank');
-
-        card.appendChild(image);
-        card.appendChild(dlBtn);
-        grid.appendChild(card);
-    });
-}
-
 </script>
 
 </body>

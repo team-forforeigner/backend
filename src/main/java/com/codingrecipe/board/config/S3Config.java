@@ -24,8 +24,21 @@ public class S3Config {
     private String secretKey; // AWS 시크릿 키
     // [끝] ===========================================
 
+    @Value("${spring.cloud.aws.s3.bucket-name}")
+    private String bucket; // 버킷 이름
+
     @Value("${spring.cloud.aws.region.static}")
     private String region; // AWS 리전(지역)
+
+    @Bean
+    public String s3Bucket() {
+        return bucket;
+    }
+
+    @Bean
+    public Region s3BucketRegion() {
+        return Region.of(region);
+    }
 
     /**
      * S3와 통신하기 위한 클라이언트 빈을 생성

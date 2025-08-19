@@ -55,7 +55,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자 API: '/api/admin/**' 경로는 'ADMIN' 역할을 가진 사용자만 접근 가능
                 .requestMatchers("/api/auth/**", "/login/oauth2/**", "/oauth-redirect").permitAll() // 인증/로그인 API: 모든 사용자가 접근 가능
                 .requestMatchers(HttpMethod.GET, "/api/boards", "/api/boards/**").permitAll() // 게시판 조회 API(GET): 모든 사용자가 접근 가능
-                .requestMatchers("/api/s3/**", "/css/**", "/js/**").permitAll()
+                .requestMatchers("/api/s3/**").permitAll() // S3 로컬 테스트 (임시로 허용!)
                 .anyRequest().authenticated()); // 그 외 모든 API: 인증된 사용자만 접근 가능
 
         // OAuth2 로그인 관련 설정

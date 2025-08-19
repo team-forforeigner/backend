@@ -21,46 +21,35 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/s3")
+@CrossOrigin(origins = "*")
 public class S3Controller {
 
     private final S3UploaderService s3UploaderService;
 
-    /**
-     * S3 이미지 목록 조회
-     */
-    @GetMapping
+    /** 전체 이미지 목록 조회 */
+    @GetMapping("/list")
     public List<Map<String, Object>> listImages() {
         return s3UploaderService.listImages();
     }
 
-    /**
-     * 이미지 업로드
-     */
+    /** 이미지 업로드 */
     @PostMapping("/upload")
     public ResponseEntity<?> uploadImage(
             @RequestParam("file") MultipartFile file,
             @RequestParam("category") String category) throws IOException {
 
-        // 허용 카테고리 검증
-        List<String> allowedCategories = List.of("community", "profile", "banner");
+        List<String> allowedCategories = List.of("community", "profile", "banner", "chatbot", "etc");
         if (!allowedCategories.contains(category.toLowerCase())) {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid category"));
         }
 
-        String key = s3UploaderService.upload(file, category);
+        String fileKey = s3UploaderService.uploadImage(file, category);
+        String url = s3UploaderService.buildFileUrl(fileKey);
 
-        String url = String.format("https://%s.s3.%s.amazonaws.com/%s",
-                s3UploaderService.getBucketName(),
-                s3UploaderService.getRegion(),
-                key);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("url", url, "key", key));
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("url", url, "fileKey", fileKey));
     }
 
-
-    /**
-     * 통합 조회/다운로드
-     */
+    /** 이미지 조회/다운로드 */
     @GetMapping("/image")
     public ResponseEntity<ByteArrayResource> getImage(
             @RequestParam String fileKey,
@@ -69,38 +58,31 @@ public class S3Controller {
         byte[] data = s3UploaderService.downloadAsBytes(fileKey);
         ByteArrayResource resource = new ByteArrayResource(data);
 
-        String contentType = s3UploaderService.getFileContentType(fileKey);
+        String contentType = FileUtil.getMimeType(fileKey);
         String fileName = FileUtil.getBaseName(fileKey);
         String encodedName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType != null ? contentType : "application/octet-stream"))
+                .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition + "; filename=\"" + encodedName + "\"")
                 .body(resource);
     }
 
-    /**
-     * 이미지 수정(교체)
-     * - 기존 이미지를 삭제하고 새로운 이미지를 업로드합니다.
-     */
-    @PutMapping("/{fileKey}")
-    public ResponseEntity<?> updateImage(@PathVariable String fileKey,
-                                         @RequestParam("file") MultipartFile file) throws IOException {
-        s3UploaderService.deleteFile(fileKey);
-        String newKey = s3UploaderService.upload(file, "uploads");
-        String url = String.format("https://%s.s3.%s.amazonaws.com/%s",
-                s3UploaderService.getBucketName(),
-                s3UploaderService.getRegion(),
-                newKey);
-        return ResponseEntity.ok(Map.of("url", url, "key", newKey));
+    /** 이미지 수정 */
+    @PutMapping("/update")
+    public ResponseEntity<?> updateImage(
+            @RequestParam String fileKey,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("category") String category) throws IOException {
+
+        Map<String, String> result = s3UploaderService.updateImage(fileKey, file, category);
+        return ResponseEntity.ok(result);
     }
 
-    /**
-     * 이미지 삭제
-     */
-    @DeleteMapping("/{fileKey}")
-    public ResponseEntity<Void> deleteImage(@PathVariable String fileKey) {
-        s3UploaderService.deleteFile(fileKey);
+    /** 이미지 삭제 */
+    @DeleteMapping("/delete")
+    public ResponseEntity<Void> deleteImage(@RequestParam String fileKey) {
+        s3UploaderService.deleteImage(fileKey);
         return ResponseEntity.noContent().build();
     }
 
