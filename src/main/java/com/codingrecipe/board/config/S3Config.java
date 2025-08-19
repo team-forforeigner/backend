@@ -16,8 +16,21 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 @Configuration
 public class S3Config {
 
-    @Value("${cloud.aws.region.static}")
+    @Value("${spring.cloud.aws.s3.bucket-name}")
+    private String bucket; // 버킷 이름
+
+    @Value("${spring.cloud.aws.region.static}")
     private String region; // AWS 리전(지역)
+
+    @Bean
+    public String s3Bucket() {
+        return bucket;
+    }
+
+    @Bean
+    public Region s3BucketRegion() {
+        return Region.of(region);
+    }
 
     /**
      * S3와 통신하기 위한 클라이언트 빈을 생성

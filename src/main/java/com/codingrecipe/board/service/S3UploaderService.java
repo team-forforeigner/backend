@@ -1,27 +1,27 @@
 package com.codingrecipe.board.service;
 
+import com.codingrecipe.board.util.FileUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Duration;
-import java.util.UUID;
+import java.io.InputStream;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -30,15 +30,14 @@ import java.util.UUID;
 public class S3UploaderService {
 
     private final S3Client s3Client;
+    private final String s3Bucket;
+    private final Region s3BucketRegion;
     private final S3Presigner s3Presigner;
-
-    @Value("${cloud.aws.s3.bucket-name}")
-    private String bucket; // S3 버킷 이름
 
     /**
      * S3 객체에 대한 미리 서명된 URL(Presigned URL)을 생성
      */
-    public String generatePresignedUrl(String fileKey) {
+    /*public String generatePresignedUrl(String fileKey) {
         if (fileKey == null || fileKey.isEmpty()) {
             return null;
         }
@@ -61,82 +60,134 @@ public class S3UploaderService {
             log.error("Presigned URL 생성 중 오류 발생: {}", fileKey, e);
             return null;
         }
+    }*/
+
+    /**
+     * 스트림 형식의 MultipartFile을 S3에 업로드
+     */
+    public String uploadImage(MultipartFile file, String category) throws IOException {
+        String uuid = UUID.randomUUID().toString();
+        String extension = FileUtil.getFileExtension(file.getOriginalFilename());
+        String yyyyMM = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
+        String fileKey = String.format("uploads/%s/%s/%s%s", category, yyyyMM, uuid, extension);
+
+        try (InputStream is = file.getInputStream()) {
+            s3Client.putObject(PutObjectRequest.builder()
+                            .bucket(s3Bucket)
+                            .key(fileKey)
+                            .contentType(file.getContentType())
+                            .build(),
+                    RequestBody.fromInputStream(is, file.getSize()));
+        }
+
+        return fileKey;
     }
 
     /**
-     * MultipartFile을 받아 S3에 업로드하고 로컬 임시 파일을 삭제
+     * S3에서 파일을 다운로드하고 InputStream(바이트)으로 반환
      */
-    public String upload(MultipartFile multipartFile, String dirName) throws IOException {
-        Path tempFilePath = null;
-        try {
-            // 시스템 기본 임시 디렉토리에 임시 파일 생성
-            tempFilePath = Files.createTempFile("s3-upload-", multipartFile.getOriginalFilename());
-
-            // MultipartFile의 내용을 임시 파일에 씁니다.
-            multipartFile.transferTo(tempFilePath);
-            File uploadFile = tempFilePath.toFile();
-
-            // S3에 업로드할 파일 이름 생성 (UUID로 고유성 보장)
-            String fileName = dirName + "/" + UUID.randomUUID() + "_" + uploadFile.getName();
-
-            // S3에 파일 업로드
-            putS3(uploadFile, fileName);
-
-            // S3에 저장된 파일 경로(key) 반환
-            return fileName;
-        } finally {
-            // 업로드 성공/실패 여부와 관계없이 임시 파일 삭제
-            if (tempFilePath != null) {
-                Files.deleteIfExists(tempFilePath);
-                log.info("로컬 임시 파일이 삭제되었습니다.");
-            }
+    public byte[] downloadAsBytes(String fileKey) {
+        if (fileKey == null || fileKey.isEmpty()) {
+            log.warn("파일 키가 null이거나 비어 있습니다.");
+            return new byte[0];
+        }
+        try (InputStream in = s3Client.getObject(GetObjectRequest.builder()
+                .bucket(s3Bucket)
+                .key(fileKey)
+                .build())) {
+            return in.readAllBytes();
+        } catch (IOException e) {
+            log.error("S3 파일 다운로드 중 오류 발생: {}", fileKey, e);
+            throw new RuntimeException("파일 다운로드 실패", e);
         }
     }
 
     /**
-     * S3Client를 사용하여 파일을 S3 버킷에 업로드
+     * S3 전체 이미지 목록 조회 (테스트용)
      */
-    private void putS3(File uploadFile, String fileName) {
-        PutObjectRequest request = PutObjectRequest.builder()
-                .bucket(bucket)
-                .key(fileName)
+    public List<Map<String, Object>> listImages() {
+        ListObjectsV2Request request = ListObjectsV2Request.builder()
+                .bucket(s3Bucket)
                 .build();
-        s3Client.putObject(request, RequestBody.fromFile(uploadFile));
+
+        ListObjectsV2Response result = s3Client.listObjectsV2(request);
+
+        return result.contents().stream()
+                .map(s -> {
+                    Map<String, Object> fileData = new HashMap<>();
+                    fileData.put("filename", s.key());
+                    fileData.put("url", String.format("https://%s.s3.%s.amazonaws.com/%s", s3Bucket, s3BucketRegion.id(), s.key()));
+                    fileData.put("size", s.size());
+                    fileData.put("lastModified", s.lastModified().toString());
+                    return fileData;
+                })
+                .toList();
     }
 
     /**
-     * S3에서 파일을 삭제하는 메서드
+     * S3 이미지 수정
+     * - 기존 이미지를 삭제하고 새로운 이미지를 업로드합니다.
      */
-    public void delete(String fileKey) {
-        if (fileKey == null || fileKey.isBlank()) {
-            log.warn("삭제할 S3 파일 키가 비어있습니다.");
-            return;
-        }
+    @Transactional
+    public Map<String, String> updateImage(String fileKey, MultipartFile newFile, String category) throws IOException {
         try {
-            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(fileKey)
-                    .build();
-            s3Client.deleteObject(deleteObjectRequest);
-            log.info("S3 파일 삭제 완료: {}", fileKey);
+            String newKey = uploadImage(newFile, category);
+
+            String url = buildFileUrl(newKey);
+
+            try {
+                deleteImage(fileKey);
+            } catch (S3Exception e) {
+                // 삭제 실패 시 로깅만 하고, 예외를 던지지 않음
+                log.warn("기존 파일 삭제 실패: {} (새 파일은 이미 업로드됨)", fileKey, e);
+            }
+
+            return Map.of(
+                    "fileKey", newKey,
+                    "url", url
+            );
+
+        } catch (S3Exception e) {
+            log.error("S3 수정 중 오류 발생: {}", fileKey, e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "S3 수정 실패", e);
+        } catch (IOException e) {
+            log.error("파일 업로드 중 오류 발생: {}", newFile.getOriginalFilename(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드 실패", e);
         } catch (Exception e) {
-            log.error("S3 파일 삭제 중 오류 발생: key={}", fileKey, e);
+            log.error("이미지 수정 중 알 수 없는 오류 발생", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 수정 실패", e);
         }
     }
 
     /**
-     * 전체 S3 URL에서 파일 키(경로)만 추출하는 헬퍼 메서드
+     * S3 이미지 삭제
+     * - 파일 키를 통해 S3에서 이미지를 삭제합니다.
      */
-    public String extractFileKeyFromUrl(String fileUrl) {
-        if(fileUrl == null || fileUrl.isBlank()){
-            return null;
-        }
+    public void deleteImage(String fileKey) {
+        DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                .bucket(s3Bucket)
+                .key(fileKey)
+                .build();
         try {
-            URL url = new URL(fileUrl);
-            return url.getPath().substring(1);
-        } catch (Exception e) {
-            log.warn("S3 URL에서 파일 키를 추출하는 데 실패했습니다: {}", fileUrl);
-            return null;
+            s3Client.deleteObject(deleteRequest);
+        } catch (S3Exception e) {
+            if ("NoSuchKey".equals(e.awsErrorDetails().errorCode())) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "파일이 존재하지 않습니다: " + fileKey);
+            }
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "파일 삭제 중 오류 발생", e);
         }
     }
+
+    /**
+     * S3 버킷에 저장된 파일의 URL을 생성
+     * - 클라이언트에 단순 반환하는 용도
+     */
+    public String buildFileUrl(String fileKey) {
+        if (fileKey == null || fileKey.isEmpty()) {
+            return null;
+        }
+        return String.format("https://%s.s3.%s.amazonaws.com/%s", s3Bucket, s3BucketRegion.id(), fileKey);
+    }
+
+
 }

@@ -1,3 +1,4 @@
+// 배너 생성, 조회, 수정, 삭제 등 비즈니스 로직을 처리하는 서비스
 package com.codingrecipe.board.service;
 
 import com.codingrecipe.board.domain.BannerEntity;
@@ -38,8 +39,8 @@ public class BannerService {
         s3UploaderService.ifPresentOrElse(
                 uploader -> {
                     try {
-                        String fileKey = uploader.upload(imageFile, "banners");
-                        bannerEntity.setImageUrl(fileKey); // DB에는 URL 대신 파일 키(key)를 저장
+                        String imageUrl = uploader.uploadImage(imageFile, "banners");
+                        bannerEntity.setImageUrl(imageUrl);
                     } catch (IOException e) {
                         log.error("S3 파일 업로드 중 오류 발생", e);
                         throw new CustomException(ErrorCode.S3_FILE_UPLOAD_FAILED);
@@ -68,8 +69,9 @@ public class BannerService {
                 uploader.delete(bannerEntity.getImageUrl());
                 // 2. 새로운 이미지 S3에 업로드 후 새 파일 키 저장
                 try {
-                    String newFileKey = uploader.upload(imageFile, "banners");
-                    bannerEntity.setImageUrl(newFileKey);
+                    // TODO: 기존 S3 이미지 삭제 로직 필요
+                    String newImageUrl = uploader.uploadImage(imageFile, "banners");
+                    bannerEntity.setImageUrl(newImageUrl);
                 } catch (IOException e) {
                     throw new CustomException(ErrorCode.S3_FILE_UPLOAD_FAILED);
                 }

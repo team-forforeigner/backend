@@ -1,3 +1,4 @@
+// 게시판(커뮤니티) 관련 비즈니스 로직을 처리하는 서비스
 package com.codingrecipe.board.service;
 
 import com.codingrecipe.board.domain.*;
@@ -67,7 +68,7 @@ public class BoardService {
             s3UploaderService.ifPresent(uploader -> {
                 try {
                     String originalFilename = boardFile.getOriginalFilename();
-                    String storedFileName = uploader.upload(boardFile, "images");
+                    String storedFileName = uploader.uploadImage(boardFile, "images");
                     // 파일 정보 엔티티 생성 및 저장
                     BoardFileEntity boardFileEntity = BoardFileEntity.toBoardFileEntity(savedEntity, originalFilename, storedFileName);
                     boardFileRepository.save(boardFileEntity);
