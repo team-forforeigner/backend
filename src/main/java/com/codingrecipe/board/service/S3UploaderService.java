@@ -19,6 +19,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -37,13 +38,13 @@ public class S3UploaderService {
     /**
      * S3 객체에 대한 미리 서명된 URL(Presigned URL)을 생성
      */
-    /*public String generatePresignedUrl(String fileKey) {
+    public String generatePresignedUrl(String fileKey) {
         if (fileKey == null || fileKey.isEmpty()) {
             return null;
         }
         try {
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                    .bucket(bucket)
+                    .bucket(s3Bucket)
                     .key(fileKey)
                     .build();
 
@@ -60,7 +61,7 @@ public class S3UploaderService {
             log.error("Presigned URL 생성 중 오류 발생: {}", fileKey, e);
             return null;
         }
-    }*/
+    }
 
     /**
      * 스트림 형식의 MultipartFile을 S3에 업로드

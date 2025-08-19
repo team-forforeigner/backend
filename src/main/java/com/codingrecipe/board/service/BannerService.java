@@ -66,7 +66,7 @@ public class BannerService {
         if (imageFile != null && !imageFile.isEmpty()) {
             s3UploaderService.ifPresent(uploader -> {
                 // 1. 기존 S3 이미지 삭제 (DB에 저장된 파일 키 사용)
-                uploader.delete(bannerEntity.getImageUrl());
+                uploader.deleteImage(bannerEntity.getImageUrl());
                 // 2. 새로운 이미지 S3에 업로드 후 새 파일 키 저장
                 try {
                     // TODO: 기존 S3 이미지 삭제 로직 필요
@@ -90,7 +90,7 @@ public class BannerService {
 
         s3UploaderService.ifPresent(uploader -> {
             // 연결된 S3 이미지 파일 삭제 (DB에 저장된 파일 키 사용)
-            uploader.delete(bannerEntity.getImageUrl());
+            uploader.deleteImage(bannerEntity.getImageUrl());
         });
 
         bannerRepository.deleteById(id);

@@ -179,7 +179,7 @@ public class BoardService {
         s3UploaderService.ifPresent(uploader -> {
             if (boardEntity.getFileAttached() == 1 && boardEntity.getBoardFileEntityList() != null && !boardEntity.getBoardFileEntityList().isEmpty()) {
                 String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
-                uploader.delete(storedFileName);
+                uploader.deleteImage(storedFileName);
             }
         });
 
