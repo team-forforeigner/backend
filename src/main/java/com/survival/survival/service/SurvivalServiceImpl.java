@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 @Service
 public class SurvivalServiceImpl implements SurvivalService {
 
-    private final CategoryRepository categoryRepository;
+    private final SurvivalCategoryRepository survivalcategoryRepository;
     private final SeriesRepository seriesRepository;
     private final EpisodesRepository episodesRepository;
     private final ChoicesRepository choicesRepository;
@@ -27,14 +27,14 @@ public class SurvivalServiceImpl implements SurvivalService {
     private final UserSeriesCompletionRepository userSeriesCompletionRepository;
     private final UserLevelRepository userLevelRepository;
 
-    public SurvivalServiceImpl(CategoryRepository categoryRepository,
+    public SurvivalServiceImpl(SurvivalCategoryRepository survivalcategoryRepository, SurvivalCategoryRepository survivalcategoryRepository1,
                                SeriesRepository seriesRepository,
                                EpisodesRepository episodesRepository,
                                ChoicesRepository choicesRepository,
                                UserProgressRepository userProgressRepository,
                                UserSeriesCompletionRepository userSeriesCompletionRepository,
                                UserLevelRepository userLevelRepository) {
-        this.categoryRepository = categoryRepository;
+        this.survivalcategoryRepository = survivalcategoryRepository;
         this.seriesRepository = seriesRepository;
         this.episodesRepository = episodesRepository;
         this.choicesRepository = choicesRepository;
@@ -45,7 +45,7 @@ public class SurvivalServiceImpl implements SurvivalService {
 
     @Override
     public SeriesListResponseDTO getSeriesList(Long categoryId) {
-        CategoryEntity category = categoryRepository.findByCategoryId(categoryId)
+        CategoryEntity category = survivalcategoryRepository.findByCategoryId(categoryId)
                 .orElseThrow(() -> new NotFoundException("카테고리를 찾을 수 없습니다: " + categoryId));
 
         List<SeriesItemDTO> seriesList = category.getSeriesList().stream()
