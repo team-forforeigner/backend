@@ -39,7 +39,7 @@ public class BannerService {
         s3UploaderService.ifPresentOrElse(
                 uploader -> {
                     try {
-                        String imageUrl = uploader.uploadImage(imageFile, "banners");
+                        String imageUrl = uploader.uploadImage(imageFile, "banner");
                         bannerEntity.setImageUrl(imageUrl);
                     } catch (IOException e) {
                         log.error("S3 파일 업로드 중 오류 발생", e);
