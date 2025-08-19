@@ -2,7 +2,7 @@ package com.survival.survival.service;
 
 import com.survival.DTO.*;
 import com.survival.Entity.*;
-import com.survival.exception.NotFoundException;
+import com.survival.exception.*;
 import com.survival.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -114,14 +114,18 @@ public class SurvivalServiceImpl implements SurvivalService {
 
     @Override
     public List<EpisodeHistoryDTO> getHistory(Long seriesId, Long userId) {
-        List<UserProgressEntity> historyList = userProgressRepository.findByUserIdAndSeriesId(userId, seriesId);
+        List<UserProgressEntity> progressList = userProgressRepository.findByUserIdAndSeriesId(userId, seriesId);
 
-        return historyList.stream()
-                .map(progress -> new EpisodeHistoryDTO(
-                        progress.getEpisodeId(),
-                        progress.getChoiceId(),
-                        progress.getPlayedAt().toString()
-                ))
+        return progressList.stream()
+                .map(progress -> {
+                    ChoicesEntity choice =choicesRepository.findByChoiceId(progress.getChoiceId())
+                            .orElseThrow(() -> new NotFoundException("선택지 내용 부재: " + progress.getChoiceId()));
+                    return new EpisodeHistoryDTO(
+                            progress.getEpisodeId(),
+                            choice.getChoiceDescription(),
+                            progress.getPlayedAt().toString()
+                    );
+                })
                 .collect(Collectors.toList());
     }
 
@@ -141,6 +145,8 @@ public class SurvivalServiceImpl implements SurvivalService {
                  .completedAt(LocalDateTime.now())
                  .build();
          userSeriesCompletionRepository.save(completionEntity);
+
+         updateUserLv(userId);
 
          return true;
      }
@@ -165,11 +171,11 @@ public class SurvivalServiceImpl implements SurvivalService {
     // LevelSystem에 사용될 메서드: 시리즈 개수에 따른 레벨 이름 반환
     private String getLevelName(int completedCount){
         if(completedCount>=6){
-            return "Lv3.III";
+            return "Lv3.III - 고급 생존자";
         } else if (completedCount>=3){
-            return "Lv2.II";
+            return "Lv2.II - 중급 생존자";
         } else if (completedCount>=1){
-            return "Lv1.I";
+            return "Lv1.I - 초급 생존자";
         } else {
             return "NONE";
         }

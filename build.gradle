@@ -1,3 +1,5 @@
+
+
 plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.5.3'
@@ -14,7 +16,7 @@ java {
 }
 
 springBoot {
-	mainClass = 'com.codingrecipe.board.BoardApplication'
+	mainClass = 'com.codingrecipe.board.BoardApplication' // 임의로 변경해서 실행해뒀습니다 ... ->> 취소! 통합해서 실행
 }
 
 // [배포 시 필요] AWS SDK 버전 관리를 위한 설정

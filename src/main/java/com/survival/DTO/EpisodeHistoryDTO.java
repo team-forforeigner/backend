@@ -14,8 +14,8 @@ public class EpisodeHistoryDTO {
     @JsonProperty("episodeId")
     private Long episodeId;
 
-    @JsonProperty("choiceId")
-    private Long choiceId;
+    @JsonProperty("choiceDescription")
+    private String choiceDescription;
 
     @JsonProperty("timestamp")
     private String timestamp;
