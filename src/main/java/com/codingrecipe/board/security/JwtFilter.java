@@ -1,6 +1,7 @@
 package com.codingrecipe.board.security;
 
 import com.codingrecipe.board.domain.Member;
+import com.codingrecipe.board.domain.MemberStatus;
 import com.codingrecipe.board.repository.LoggedOutTokenRepository;
 import com.codingrecipe.board.repository.MemberRepository;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -49,7 +50,6 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        // ---  로그아웃된 토큰인지 DB에서 확인 ---
         if (loggedOutTokenRepository.existsByToken(token)) {
             log.warn("이미 로그아웃 처리된 토큰입니다.");
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token is logged out");
@@ -57,12 +57,9 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         try {
-            // 토큰에서 사용자 이메일 추출
             String email = jwtUtil.getEmail(token);
 
-            // 이메일이 존재하고, 현재 SecurityContext에 인증 정보가 없는 경우
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                // 토큰 만료 여부 확인 (DB 조회 전에 확인하여 불필요한 부하 감소)
                 if (jwtUtil.isTokenExpired(token)) {
                     log.warn("토큰이 만료되었습니다.");
                     filterChain.doFilter(request, response);
@@ -73,13 +70,19 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 if (memberOpt.isPresent()) {
                     Member member = memberOpt.get();
+
+                    if (member.getStatus() == MemberStatus.SUSPENDED) {
+                        log.warn("정지된 계정의 토큰입니다: {}", email);
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Suspended account");
+                        return;
+                    }
+
                     UsernamePasswordAuthenticationToken authenticationToken =
                             new UsernamePasswordAuthenticationToken(member.getEmail(), null, Collections.singletonList(new SimpleGrantedAuthority(member.getRoleKey())));
                     authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                 }
             }
-
         } catch (ExpiredJwtException e) {
             log.error("토큰이 만료되었습니다: {}", e.getMessage());
         } catch (Exception e) {

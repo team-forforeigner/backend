@@ -1,6 +1,7 @@
 package com.codingrecipe.board.service;
 
 import com.codingrecipe.board.domain.Member;
+import com.codingrecipe.board.domain.MemberStatus;
 import com.codingrecipe.board.domain.Role;
 import com.codingrecipe.board.dto.EmailRequestDto;
 import com.codingrecipe.board.dto.PasswordChangeRequest;
@@ -99,6 +100,11 @@ public class MemberService {
         if (!member.isEmailVerified()) {
             throw new CustomException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
+
+        if (member.getStatus() == MemberStatus.SUSPENDED) {
+            throw new CustomException(ErrorCode.USER_SUSPENDED);
+        }
+
         return jwtUtil.generateToken(member.getEmail());
     }
 
@@ -170,5 +176,32 @@ public class MemberService {
     @Transactional(readOnly = true)
     public Optional<Member> findOne(Long memberId) {
         return memberRepository.findById(memberId);
+    }
+
+    /**
+     * 관리자가 특정 회원을 ID로 삭제합니다.
+     */
+    public void deleteMemberByAdmin(Long memberId) {
+        if (!memberRepository.existsById(memberId)) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+        memberRepository.deleteById(memberId);
+    }
+
+    /**
+     * 관리자가 이메일 시작 문자로 회원을 검색합니다.
+     */
+    @Transactional(readOnly = true)
+    public List<Member> searchMembersByEmail(String emailKeyword) {
+        return memberRepository.findByEmailStartingWith(emailKeyword);
+    }
+
+    /**
+     * 관리자가 회원의 상태(활성/정지)를 변경합니다.
+     */
+    public void updateMemberStatus(Long memberId, MemberStatus status) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        member.setStatus(status);
     }
 }

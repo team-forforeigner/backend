@@ -1,4 +1,3 @@
-// 게시판(커뮤니티) 관련 비즈니스 로직을 처리하는 서비스
 package com.codingrecipe.board.service;
 
 import com.codingrecipe.board.domain.*;
@@ -45,7 +44,12 @@ public class BoardService {
         CategoryEntity category = categoryRepository.findById(boardDTO.getCategoryId())
                 .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        // DTO를 Entity로 변환 (기본 정보 설정)
+        if ("공지사항".equals(category.getName())) {
+            if (writer.getRole() != Role.ADMIN) {
+                throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
+            }
+        }
+
         BoardEntity boardEntity = new BoardEntity();
         boardEntity.setWriter(writer);
         boardEntity.setBoardTitle(boardDTO.getBoardTitle());
@@ -239,5 +243,18 @@ public class BoardService {
      */
     private BoardDTO convertToDto(BoardEntity board) {
         return BoardDTO.toBoardDTO(board);
+    }
+    public void deleteBoardByAdmin(Long boardId) {
+        BoardEntity boardEntity = boardRepository.findById(boardId)
+                .orElseThrow(() -> new CustomException(ErrorCode.BOARD_NOT_FOUND));
+
+        s3UploaderService.ifPresent(uploader -> {
+            if (boardEntity.getFileAttached() == 1 && boardEntity.getBoardFileEntityList() != null && !boardEntity.getBoardFileEntityList().isEmpty()) {
+                String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
+                uploader.deleteImage(storedFileName);
+            }
+        });
+
+        boardRepository.delete(boardEntity);
     }
 }
