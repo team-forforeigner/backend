@@ -4,6 +4,11 @@ package com.codingrecipe.board.repository;
 import com.codingrecipe.board.domain.CategoryEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Optional;
+
 public interface CategoryRepository extends JpaRepository<CategoryEntity, Long> {
     // JpaRepository를 상속받아 기본적인 CRUD(Create, Read, Update, Delete) 기능을 자동 생성
+
+    Optional<CategoryEntity> findByName(String name);
+
 }

@@ -16,18 +16,17 @@ public class DataInitializer {
     @PostConstruct
     @Transactional
     public void init() {
-        if (categoryRepository.count() == 0) {
-            CategoryEntity freeBoard = new CategoryEntity();
-            freeBoard.setName("자유게시판");
-            categoryRepository.save(freeBoard);
+        initCategory("자유게시판");
+        initCategory("정보게시판");
+        initCategory("뉴비게시판");
+        initCategory("공지사항"); // 관리자 전용 '공지사항' 카테고리
+    }
 
-            CategoryEntity infoBoard = new CategoryEntity();
-            infoBoard.setName("정보게시판");
-            categoryRepository.save(infoBoard);
-
-            CategoryEntity newbieBoard = new CategoryEntity();
-            newbieBoard.setName("뉴비게시판");
-            categoryRepository.save(newbieBoard);
+    private void initCategory(String name) {
+        if (categoryRepository.findByName(name).isEmpty()) {
+            CategoryEntity category = new CategoryEntity();
+            category.setName(name);
+            categoryRepository.save(category);
         }
     }
 }

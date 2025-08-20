@@ -14,4 +14,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     // 경험치 높은 순으로 상위 100명 조회 (랭킹용)
     List<Member> findTop100ByOrderByExperienceDesc();
+
+    List<Member> findByEmailStartingWith(String email);
+
 }
