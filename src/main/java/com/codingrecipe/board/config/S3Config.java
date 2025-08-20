@@ -16,10 +16,10 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 @Configuration
 public class S3Config {
 
-    @Value("${spring.cloud.aws.s3.bucket-name}")
+    @Value("${cloud.aws.s3.bucket-name}")
     private String bucket; // 버킷 이름
 
-    @Value("${spring.cloud.aws.region.static}")
+    @Value("${cloud.aws.region.static}")
     private String region; // AWS 리전(지역)
 
     @Bean
