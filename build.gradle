@@ -55,7 +55,7 @@ dependencies {
 	annotationProcessor 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 //	runtimeOnly 'com.mysql:mysql-connector-j' // runtimeOnly -> implementation으로 변경
-	implementation 'com.mysql:mysql-connector-j:8.0.33'
+	implementation 'com.mysql:mysql-connector-j:9.4.0'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
 	// 4. Thymeleaf (서버 렌더링용)
