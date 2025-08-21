@@ -12,6 +12,10 @@ import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.datasource.init.DataSourceInitializer;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
@@ -63,5 +67,16 @@ public class CommunityDBConfig {
     public PlatformTransactionManager transactionManager(
             @Qualifier("communityEntityManagerFactory") LocalContainerEntityManagerFactoryBean entityManagerFactory) {
         return new JpaTransactionManager(entityManagerFactory.getObject());
+    }
+
+    @Bean
+    public DataSourceInitializer communityDataSourceInitializer(@Qualifier("communityDataSource") DataSource communityDataSource) {
+        ResourceDatabasePopulator resourceDatabasePopulator = new ResourceDatabasePopulator();
+        resourceDatabasePopulator.addScript(new ClassPathResource("data-community.sql"));
+
+        DataSourceInitializer dataSourceInitializer = new DataSourceInitializer();
+        dataSourceInitializer.setDataSource(communityDataSource);
+        dataSourceInitializer.setDatabasePopulator(resourceDatabasePopulator);
+        return dataSourceInitializer;
     }
 }

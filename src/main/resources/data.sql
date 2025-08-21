@@ -1,7 +1,4 @@
 
-INSERT INTO member (id, email, nickname, password, nationality, role, status, title, badge)
-VALUES (1, 'test@example.com', '테스트유저', 'password123', 'South Korea', 'USER', 'ACTIVE', '초보 생존자', 'badge_url');
-
 -- =================================================================
 -- '날씨 - 벚꽃'
 -- =================================================================

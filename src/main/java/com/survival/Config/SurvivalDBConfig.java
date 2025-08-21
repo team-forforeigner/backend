@@ -13,6 +13,10 @@ import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.datasource.init.DataSourceInitializer;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
@@ -26,22 +30,20 @@ import java.util.Map;
 )
 public class SurvivalDBConfig {
 
-    // 1단계: survival DB의 설정 정보(url, username 등)를 먼저 읽어서 객체로 만듭니다.
-    @Primary
+//    @Primary
     @Bean(name = "survivalProperties")
     @ConfigurationProperties(prefix = "spring.datasource.survival")
     public DataSourceProperties survivalProperties() {
         return new DataSourceProperties();
     }
 
-    // 2단계: 위에서 만든 설정 정보 객체를 사용하여 DataSource를 확실하게 생성합니다.
-    @Primary
+//    @Primary
     @Bean(name = "survivalDataSource")
     public DataSource survivalDataSource(@Qualifier("survivalProperties") DataSourceProperties properties) {
         return properties.initializeDataSourceBuilder().build();
     }
 
-    @Primary
+//    @Primary
     @Bean(name = "survivalEntityManagerFactory")
     public LocalContainerEntityManagerFactoryBean entityManagerFactory(
             EntityManagerFactoryBuilder builder,
@@ -60,10 +62,21 @@ public class SurvivalDBConfig {
                 .build();
     }
 
-    @Primary
+//    @Primary
     @Bean(name = "survivalTransactionManager")
     public PlatformTransactionManager transactionManager(
             @Qualifier("survivalEntityManagerFactory") LocalContainerEntityManagerFactoryBean entityManagerFactory) {
         return new JpaTransactionManager(entityManagerFactory.getObject());
+    }
+
+    @Bean
+    public DataSourceInitializer survivalDataSourceInitializer(@Qualifier("survivalDataSource") DataSource survivalDataSource) {
+        ResourceDatabasePopulator resourceDatabasePopulator = new ResourceDatabasePopulator();
+        resourceDatabasePopulator.addScript(new ClassPathResource("data-community.sql"));
+
+        DataSourceInitializer dataSourceInitializer = new DataSourceInitializer();
+        dataSourceInitializer.setDataSource(survivalDataSource);
+        dataSourceInitializer.setDatabasePopulator(resourceDatabasePopulator);
+        return dataSourceInitializer;
     }
 }
