@@ -132,7 +132,6 @@ public class BoardService {
                 .orElseThrow(() -> new CustomException(ErrorCode.BOARD_NOT_FOUND));
         BoardDTO boardDTO = BoardDTO.toBoardDTO(boardEntity);
 
-        // S3 서비스가 활성화되어 있고 파일이 첨부된 경우, 미리 서명된 URL 생성
         s3UploaderService.ifPresent(uploader -> {
             if (boardEntity.getFileAttached() == 1 && !boardEntity.getBoardFileEntityList().isEmpty()) {
                 String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();

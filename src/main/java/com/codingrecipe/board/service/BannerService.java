@@ -105,12 +105,13 @@ public class BannerService {
     }
 
     // 엔티티 -> DTO 변환 시 S3 파일 키를 완전한 URL로 만들어주는 헬퍼 메서드
+    // * 수정 : presigned URL을 사용하지 않도록 변경.
     private BannerDTO convertEntityToDto(BannerEntity entity) {
         BannerDTO dto = BannerDTO.fromEntity(entity);
-        s3UploaderService.ifPresent(uploader -> {
+        /*s3UploaderService.ifPresent(uploader -> {
             String fullUrl = uploader.generatePresignedUrl(entity.getImageUrl());
             dto.setImageUrl(fullUrl); // DTO에는 완전한 URL을 담아준다.
-        });
+        });*/
         return dto;
     }
 }
