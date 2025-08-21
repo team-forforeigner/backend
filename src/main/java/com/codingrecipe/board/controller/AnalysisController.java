@@ -30,8 +30,7 @@ import java.util.Optional;
 public class AnalysisController {
 
     private final WebClient.Builder webClientBuilder;
-    private final S3UploaderService s3UploaderService;
-//    private final Optional<S3UploaderService> s3UploaderService;
+    private final Optional<S3UploaderService> s3UploaderService;
 
     @Value("${ai-server.access-client-id}")
     private String accessClientId;
@@ -50,24 +49,6 @@ public class AnalysisController {
          */
 
         // --- 1. S3 업로드 -> 객체 키 반환 ---
-        String fileKey = s3UploaderService.uploadImage(imageFile, "chatbot");
-        System.out.println("S3 업로드 완료. fileKey: " + fileKey);
-
-        // --- 2. 바이트 배열 추출 (S3에서 읽기) ---
-        byte[] imageBytes = s3UploaderService.downloadAsBytes(fileKey);
-
-        WebClient webClient = webClientBuilder.baseUrl("https://ai.navoodiai.site").build();
-
-        // --- 3. MultipartBodyBuilder ---
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ByteArrayResource(imageBytes) {
-            @Override
-            public String getFilename() {
-                return imageFile.getOriginalFilename();
-            }
-        });
-
-        /*// --- 1. S3 업로드 -> 객체 키 반환 ---
         String fileKey = s3UploaderService
                 .map(uploader -> {
                     try {
@@ -94,7 +75,7 @@ public class AnalysisController {
             public String getFilename() {
                 return imageFile.getOriginalFilename();
             }
-        });*/
+        });
 
         // --- 4. YOLO 분석 요청 ---
         return webClient.post()
