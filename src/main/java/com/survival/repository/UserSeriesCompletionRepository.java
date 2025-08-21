@@ -10,7 +10,7 @@ import java.util.List;
 @Repository
 public interface UserSeriesCompletionRepository extends JpaRepository<UserSeriesCompletionEntity, Long> {
 
-    Optional<UserSeriesCompletionEntity> findByUserIdAndSeriesId(Long userId, Long seriesId);
+    Optional<UserSeriesCompletionEntity> findByUserIdAndSeriesSeriesId(Long userId, Long seriesId);
 
     List<UserSeriesCompletionEntity> findByUserId(Long userId);
 }

@@ -9,16 +9,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 ///SurvivalService 구현
 
 @Service
 public class SurvivalServiceImpl implements SurvivalService {
+
+    private final ObjectMapper objectMapper;
 
     private final MemberRepository memberRepository;
 
@@ -37,7 +41,8 @@ public class SurvivalServiceImpl implements SurvivalService {
                                UserProgressRepository userProgressRepository,
                                UserSeriesCompletionRepository userSeriesCompletionRepository,
                                UserLevelRepository userLevelRepository,
-                               MemberRepository memberRepository) {
+                               MemberRepository memberRepository,
+                               ObjectMapper objectMapper) {
         this.survivalcategoryRepository = survivalcategoryRepository;
         this.seriesRepository = seriesRepository;
         this.episodesRepository = episodesRepository;
@@ -46,6 +51,7 @@ public class SurvivalServiceImpl implements SurvivalService {
         this.userSeriesCompletionRepository = userSeriesCompletionRepository;
         this.userLevelRepository = userLevelRepository;
         this.memberRepository = memberRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -102,23 +108,37 @@ public class SurvivalServiceImpl implements SurvivalService {
 
     @Override
     public EpisodeResponseDTO getEpisode(Long episodeId) {
-        EpisodesEntity episode = episodesRepository.findByEpisodeId(episodeId)
-                .orElseThrow(() -> new NotFoundException("에피소드를 찾을 수 없습니다: " + episodeId));
+        EpisodesEntity episodeEntity = episodesRepository.findByEpisodeId(episodeId)
+                .orElseThrow(() -> new RuntimeException("에피소드를 찾을 수 없습니다."));
 
-        List<ChoiceDTO> choiceDTOs = episode.getChoices().stream()
-                .map(choiceEntity -> new ChoiceDTO(
-                        choiceEntity.getChoiceId(),
-                        choiceEntity.getChoiceDescription(),
-                        choiceEntity.getNextEpisode().getEpisodeId()
-                ))
-                .collect(Collectors.toList());
+        EpisodeResponseDTO dto = new EpisodeResponseDTO();
+        dto.setEpisodeId(episodeEntity.getEpisodeId());
+        dto.setTitle(episodeEntity.getEpisodeTitle());
 
-        return new EpisodeResponseDTO(
-                episode.getEpisodeId(),
-                episode.getEpisodeTitle(),
-                episode.getEpisodeContent(),
-                choiceDTOs
-        );
+        try {
+            List<String> contentList = objectMapper.readValue(episodeEntity.getEpisodeContent(), new TypeReference<List<String>>() {});
+            dto.setContent(contentList);
+        } catch (JsonProcessingException e) {
+            // 파싱 실패 시 예외 처리
+            dto.setContent(Collections.emptyList());
+        }
+
+        List<ChoiceDTO> choiceDTOs = episodeEntity.getChoices().stream().map(choiceEntity -> {
+            ChoiceDTO choiceDTO = new ChoiceDTO();
+            choiceDTO.setChoiceId(choiceEntity.getChoiceId());
+            choiceDTO.setNextEpisodeId(choiceEntity.getNextEpisode().getEpisodeId());
+            try {
+                Map<String, String> descriptionMap = objectMapper.readValue(choiceEntity.getChoiceDescription(), new TypeReference<Map<String, String>>() {});
+                choiceDTO.setDescription(descriptionMap);
+            } catch (JsonProcessingException e) {
+                choiceDTO.setDescription(Collections.emptyMap());
+            }
+            return choiceDTO;
+        }).collect(Collectors.toList());
+
+        dto.setChoices(choiceDTOs);
+
+        return dto;
     }
 
     @Override
@@ -143,7 +163,7 @@ public class SurvivalServiceImpl implements SurvivalService {
                 .orElseThrow(() -> new NotFoundException("시리즈를 찾을 수 없습니다: " + seriesId));
 
         // 이미 완료 상태인지 확인
-        if (userSeriesCompletionRepository.findByUserIdAndSeriesId(userId, seriesId).isPresent()) {
+        if (userSeriesCompletionRepository.findByUserIdAndSeriesSeriesId(userId, seriesId).isPresent()) {
             return false;
         }
 
@@ -161,7 +181,7 @@ public class SurvivalServiceImpl implements SurvivalService {
     @Override
     @Transactional
     public boolean resetSeries(Long userId, Long seriesId) {
-        userProgressRepository.deleteByUserIdAndSeriesId(userId, seriesId);
+        userProgressRepository.deleteByUserIdAndSeriesSeriesId(userId, seriesId);
         return true;
     }
 

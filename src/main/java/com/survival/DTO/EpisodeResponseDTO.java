@@ -14,14 +14,14 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class EpisodeResponseDTO {
-    @JsonProperty("epiosdeId")
+    @JsonProperty("episodeId")
     private Long episodeId;
 
     @JsonProperty("title")
     private String title;
 
     @JsonProperty("content")
-    private String content;
+    private List<String> content;
 
     @JsonProperty("choices")
     private List<ChoiceDTO>  choices;

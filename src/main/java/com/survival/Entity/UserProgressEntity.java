@@ -17,11 +17,13 @@ import java.time.LocalDateTime;
 @Builder
 @Table(name="user_progress")
 public class UserProgressEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long userprogressid;
 
     private Long userId; // 저장 을 위함,  member에서 외래키로 받아와야 하는 부분
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name="id")
+    private long user_id;
 
     // 현재 진행 중인 시리즈의 ID
     @ManyToOne(fetch = FetchType.LAZY)

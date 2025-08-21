@@ -18,5 +18,5 @@ public interface UserProgressRepository extends JpaRepository<UserProgressEntity
             "ORDER BY up.playedAt ASC")
     List<UserProgressEntity> findHistory(@Param("userId") Long userId, @Param("seriesId") Long seriesId);
 
-    void deleteByUserIdAndSeriesId(Long userId, Long seriesId);
+    void deleteByUserIdAndSeriesSeriesId(Long userId, Long seriesId);
 }

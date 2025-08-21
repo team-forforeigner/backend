@@ -3,6 +3,8 @@ package com.survival.DTO;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
+import java.util.Map;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -13,7 +15,7 @@ public class ChoiceDTO {
     private Long choiceId;
 
     @JsonProperty("description")
-    private String description;
+    private Map<String, String> description;
 
     @JsonProperty("nextEpisodeId")
     private Long nextEpisodeId;

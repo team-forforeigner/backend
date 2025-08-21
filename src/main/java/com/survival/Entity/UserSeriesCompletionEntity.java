@@ -19,7 +19,6 @@ public class UserSeriesCompletionEntity {
 
     private Long userId; // 저장 을 위함,  member에서 외래키로 받아와야 하는 부분
 
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="series_id")
     private SeriesEntity series;

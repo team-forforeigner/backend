@@ -6,7 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -20,50 +19,49 @@ import java.util.Map;
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(
-        entityManagerFactoryRef = "survivalEntityManagerFactory",
-        transactionManagerRef = "survivalTransactionManager",
-        basePackages = {"com.survival.repository"}
+        // community DB가 사용할 Repository 패키지 경로 지정
+        basePackages = {"com.codingrecipe.board.repository"},
+        entityManagerFactoryRef = "communityEntityManagerFactory",
+        transactionManagerRef = "communityTransactionManager"
 )
-public class SurvivalDBConfig {
+public class CommunityDBConfig {
 
-    // 1단계: survival DB의 설정 정보(url, username 등)를 먼저 읽어서 객체로 만듭니다.
-    @Primary
-    @Bean(name = "survivalProperties")
-    @ConfigurationProperties(prefix = "spring.datasource.survival")
-    public DataSourceProperties survivalProperties() {
+    // 1단계: community DB 설정 정보 읽기
+    @Bean(name = "communityProperties")
+    @ConfigurationProperties(prefix = "spring.datasource.community")
+    public DataSourceProperties communityProperties() {
         return new DataSourceProperties();
     }
 
-    // 2단계: 위에서 만든 설정 정보 객체를 사용하여 DataSource를 확실하게 생성합니다.
-    @Primary
-    @Bean(name = "survivalDataSource")
-    public DataSource survivalDataSource(@Qualifier("survivalProperties") DataSourceProperties properties) {
+    // 2단계: community DB의 DataSource 생성
+    @Bean(name = "communityDataSource")
+    public DataSource communityDataSource(@Qualifier("communityProperties") DataSourceProperties properties) {
         return properties.initializeDataSourceBuilder().build();
     }
 
-    @Primary
-    @Bean(name = "survivalEntityManagerFactory")
+    // community DB의 EntityManagerFactory
+    @Bean(name = "communityEntityManagerFactory")
     public LocalContainerEntityManagerFactoryBean entityManagerFactory(
             EntityManagerFactoryBuilder builder,
-            @Qualifier("survivalDataSource") DataSource dataSource) {
+            @Qualifier("communityDataSource") DataSource dataSource) {
 
         Map<String, String> properties = new HashMap<>();
         properties.put("hibernate.hbm2ddl.auto", "update");
-        // Hibernate 6.x 부터는 MySQL8Dialect 보다 MySQLDialect 사용을 권장합니다.
         properties.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
 
         return builder
                 .dataSource(dataSource)
-                .packages("com.survival.Entity")
-                .persistenceUnit("survival")
+                // community DB가 사용할 Entity 패키지 경로 지정
+                .packages("com.codingrecipe.board.domain")
+                .persistenceUnit("community")
                 .properties(properties)
                 .build();
     }
 
-    @Primary
-    @Bean(name = "survivalTransactionManager")
+    // community DB의 TransactionManager 생성
+    @Bean(name = "communityTransactionManager")
     public PlatformTransactionManager transactionManager(
-            @Qualifier("survivalEntityManagerFactory") LocalContainerEntityManagerFactoryBean entityManagerFactory) {
+            @Qualifier("communityEntityManagerFactory") LocalContainerEntityManagerFactoryBean entityManagerFactory) {
         return new JpaTransactionManager(entityManagerFactory.getObject());
     }
 }
