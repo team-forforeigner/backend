@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @ComponentScan(basePackages =  "com.survival")
 @EntityScan(basePackages = "com.survival.Entity")
-@EnableJpaRepositories(basePackages = "com.survival.repository")
+// @EnableJpaRepositories(basePackages = "com.survival.repository")
 @SpringBootApplication
 public class SurvivalApplication {
 

@@ -1,5 +1,6 @@
 package com.survival.survival.service;
 
+import com.codingrecipe.board.repository.MemberRepository;
 import com.survival.DTO.*;
 import com.survival.Entity.*;
 import com.survival.exception.*;
@@ -14,10 +15,12 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 
- ///SurvivalService 구현
+///SurvivalService 구현
 
 @Service
 public class SurvivalServiceImpl implements SurvivalService {
+
+    private final MemberRepository memberRepository;
 
     private final SurvivalCategoryRepository survivalcategoryRepository;
     private final SeriesRepository seriesRepository;
@@ -33,7 +36,8 @@ public class SurvivalServiceImpl implements SurvivalService {
                                ChoicesRepository choicesRepository,
                                UserProgressRepository userProgressRepository,
                                UserSeriesCompletionRepository userSeriesCompletionRepository,
-                               UserLevelRepository userLevelRepository) {
+                               UserLevelRepository userLevelRepository,
+                               MemberRepository memberRepository) {
         this.survivalcategoryRepository = survivalcategoryRepository;
         this.seriesRepository = seriesRepository;
         this.episodesRepository = episodesRepository;
@@ -41,6 +45,7 @@ public class SurvivalServiceImpl implements SurvivalService {
         this.userProgressRepository = userProgressRepository;
         this.userSeriesCompletionRepository = userSeriesCompletionRepository;
         this.userLevelRepository = userLevelRepository;
+        this.memberRepository = memberRepository;
     }
 
     @Override
@@ -63,20 +68,24 @@ public class SurvivalServiceImpl implements SurvivalService {
     @Override
     @Transactional
     public ChoiceClickResponseDTO choose(Long userId, Long choiceId) {
-        ChoicesEntity choice = choicesRepository.findByChoiceId(choiceId)
+        // [무결성] Member가 community_db에 실제로 존재하는지 확인
+        memberRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("유저를 찾을 수 없습니다: " + userId));
+
+        ChoicesEntity choice = choicesRepository.findById(choiceId) // findByChoiceId -> findById
                 .orElseThrow(() -> new NotFoundException("선택지를 찾을 수 없습니다: " + choiceId));
 
-        Long nextEpisodeId = choice.getNextEpisode().getEpisodeId();
-
+        // UserProgressEntity 생성 시 => userId는 ID 나머지는 객체로 저장
         UserProgressEntity userProgress = UserProgressEntity.builder()
                 .userId(userId)
-                .seriesId(choice.getEpisode().getSeries().getSeriesId())
-                .episodeId(choice.getEpisode().getEpisodeId())
-                .choiceId(choice.getChoiceId())
+                .series(choice.getEpisode().getSeries())
+                .episode(choice.getEpisode())
+                .choice(choice)
                 .playedAt(LocalDateTime.now())
                 .build();
         userProgressRepository.save(userProgress);
 
+        Long nextEpisodeId = choice.getNextEpisode().getEpisodeId();
         return new ChoiceClickResponseDTO(nextEpisodeId, "다음 에피소드로 이동합니다.");
     }
 
@@ -114,42 +123,40 @@ public class SurvivalServiceImpl implements SurvivalService {
 
     @Override
     public List<EpisodeHistoryDTO> getHistory(Long seriesId, Long userId) {
-        List<UserProgressEntity> progressList = userProgressRepository.findByUserIdAndSeriesId(userId, seriesId);
+        List<UserProgressEntity> progressList = userProgressRepository.findHistory(userId, seriesId);
 
         return progressList.stream()
-                .map(progress -> {
-                    ChoicesEntity choice =choicesRepository.findByChoiceId(progress.getChoiceId())
-                            .orElseThrow(() -> new NotFoundException("선택지 내용 부재: " + progress.getChoiceId()));
-                    return new EpisodeHistoryDTO(
-                            progress.getEpisodeId(),
-                            choice.getChoiceDescription(),
-                            progress.getPlayedAt().toString()
-                    );
-                })
+                .map(progress -> new EpisodeHistoryDTO(
+                        progress.getEpisode().getEpisodeId(),
+                        progress.getChoice().getChoiceDescription(),
+                        progress.getPlayedAt().toString()
+                ))
                 .collect(Collectors.toList());
     }
 
-     @Override
-     @Transactional
-     public boolean completeSeries(Long userId, Long seriesId) {
-         // 이미 완료 상태인지 확인
-         Optional<UserSeriesCompletionEntity> completion = userSeriesCompletionRepository.findByUserIdAndSeriesId(userId, seriesId);
-         if (completion.isPresent()) {
-             return false; // 이미 완료된 시리즈는 다시 완료 처리하지 않도록 함
-         }
+    @Override
+    @Transactional
+    public boolean completeSeries(Long userId, Long seriesId) {
+        memberRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("유저를 찾을 수 없습니다: " + userId));
+        SeriesEntity series = seriesRepository.findById(seriesId)
+                .orElseThrow(() -> new NotFoundException("시리즈를 찾을 수 없습니다: " + seriesId));
 
-         // 새로운 완료 엔티티 생성 및 저장
-         UserSeriesCompletionEntity completionEntity = UserSeriesCompletionEntity.builder()
-                 .userId(userId)
-                 .seriesId(seriesId)
-                 .completedAt(LocalDateTime.now())
-                 .build();
-         userSeriesCompletionRepository.save(completionEntity);
+        // 이미 완료 상태인지 확인
+        if (userSeriesCompletionRepository.findByUserIdAndSeriesId(userId, seriesId).isPresent()) {
+            return false;
+        }
 
-         updateUserLv(userId);
+        UserSeriesCompletionEntity completionEntity = UserSeriesCompletionEntity.builder()
+                .userId(userId)
+                .series(series)
+                .completedAt(LocalDateTime.now())
+                .build();
+        userSeriesCompletionRepository.save(completionEntity);
 
-         return true;
-     }
+        updateUserLv(userId);
+        return true;
+    }
 
     @Override
     @Transactional
@@ -182,29 +189,28 @@ public class SurvivalServiceImpl implements SurvivalService {
     }
 
     // LevelSystem
-     private void updateUserLv(Long userId){
-        //완료한 시리즈 개수 조회(확인)
+    @Transactional
+    private void updateUserLv(Long userId){
+        memberRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("유저를 찾을 수 없습니다: " + userId));
+
         List<UserSeriesCompletionEntity> completedSeriesList = userSeriesCompletionRepository.findByUserId(userId);
         int completedCount = completedSeriesList.size();
 
-        //Level finding
         String newLevelName = getLevelName(completedCount);
 
-         // Level info update
-         Optional<UserLevelEntity> userLevelOptional = userLevelRepository.findByUserId(userId);
-         if (userLevelOptional.isPresent()){
-             UserLevelEntity userLevel = userLevelOptional.get();
-             userLevel.updateLevel(completedCount, newLevelName);
-             userLevelRepository.save(userLevel);
-         } else {
-             // Level info generate
-             UserLevelEntity newUserLevel = UserLevelEntity.builder()
-                     .userId(userId)
-                     .completedSeriesCount(completedCount)
-                     .levelName(newLevelName)
-                     .build();
-             userLevelRepository.save(newUserLevel);
-         }
-
-     }
+        Optional<UserLevelEntity> userLevelOptional = userLevelRepository.findByUserId(userId);
+        if (userLevelOptional.isPresent()){
+            UserLevelEntity userLevel = userLevelOptional.get();
+            userLevel.updateLevel(completedCount, newLevelName);
+            userLevelRepository.save(userLevel);
+        } else {
+            UserLevelEntity newUserLevel = UserLevelEntity.builder()
+                    .userId(userId)
+                    .completedSeriesCount(completedCount)
+                    .levelName(newLevelName)
+                    .build();
+            userLevelRepository.save(newUserLevel);
+        }
+    }
 }

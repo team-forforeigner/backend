@@ -1,5 +1,6 @@
 package com.survival.Entity;
 
+import com.codingrecipe.board.domain.Member;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,19 +19,27 @@ import java.time.LocalDateTime;
 public class UserProgressEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private long userprogressid;
 
-    private long userId;
+    private Long userId; // 저장 을 위함,  member에서 외래키로 받아와야 하는 부분
 
     // 현재 진행 중인 시리즈의 ID
-    private long seriesId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="series_id")
+    private SeriesEntity series;
 
     // 사용자가 현재 도달한 에피소드 ID
-    private long episodeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="episode_id")
+    private EpisodesEntity episode;
 
     // 사용자가 선택한 선택지 ID
-    private long choiceId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="choice_id")
+    private ChoicesEntity choice;
 
     // 선택이 이루어진 시각
     private LocalDateTime playedAt;
+
+
 }

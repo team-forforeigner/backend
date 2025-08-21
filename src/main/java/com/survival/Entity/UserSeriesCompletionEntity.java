@@ -1,5 +1,6 @@
 package com.survival.Entity;
 
+import com.codingrecipe.board.domain.Member;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,9 +17,12 @@ public class UserSeriesCompletionEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userSeriesCompletionId;
 
-    private Long userId;
+    private Long userId; // 저장 을 위함,  member에서 외래키로 받아와야 하는 부분
 
-    private Long seriesId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="series_id")
+    private SeriesEntity series;
 
     private LocalDateTime completedAt;
 }

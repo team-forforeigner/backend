@@ -6,9 +6,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-// 시리즈 엔티티에 대한 접근 담당
 @Repository
 public interface SeriesRepository extends JpaRepository<SeriesEntity, Long> {
-    // 특정 categoryId에 속한 모든 SeriesEntity를 조회하는 메서드
-    List<SeriesEntity> findByCategoryCategoryId(Long categoryId);
+    // SeriesEntity의 category 필드의 categoryId를 기준으로 조회
+    List<SeriesEntity> findByCategory_CategoryId(Long categoryId);
 }
