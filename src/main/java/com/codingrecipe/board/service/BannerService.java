@@ -65,12 +65,8 @@ public class BannerService {
 
         if (imageFile != null && !imageFile.isEmpty()) {
             s3UploaderService.ifPresent(uploader -> {
-                // 1. 기존 S3 이미지 삭제 (DB에 저장된 파일 키 사용)
-                uploader.deleteImage(bannerEntity.getImageUrl());
-                // 2. 새로운 이미지 S3에 업로드 후 새 파일 키 저장
                 try {
-                    // TODO: 기존 S3 이미지 삭제 로직 필요
-                    String newImageUrl = uploader.uploadImage(imageFile, "banners");
+                    String newImageUrl = uploader.updateImage(bannerEntity.getImageUrl(), imageFile, "banners");
                     bannerEntity.setImageUrl(newImageUrl);
                 } catch (IOException e) {
                     throw new CustomException(ErrorCode.S3_FILE_UPLOAD_FAILED);

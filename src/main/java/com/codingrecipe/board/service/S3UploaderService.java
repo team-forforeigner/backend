@@ -130,11 +130,9 @@ public class S3UploaderService {
      * - 기존 이미지를 삭제하고 새로운 이미지를 업로드합니다.
      */
     @Transactional
-    public Map<String, String> updateImage(String fileKey, MultipartFile newFile, String category) throws IOException {
+    public String updateImage(String fileKey, MultipartFile newFile, String category) throws IOException {
         try {
-            String newKey = uploadImage(newFile, category);
-
-            String url = buildFileUrl(newKey);
+            String newFileKey = uploadImage(newFile, category);
 
             try {
                 deleteImage(fileKey);
@@ -143,10 +141,7 @@ public class S3UploaderService {
                 log.warn("기존 파일 삭제 실패: {} (새 파일은 이미 업로드됨)", fileKey, e);
             }
 
-            return Map.of(
-                    "fileKey", newKey,
-                    "url", url
-            );
+            return newFileKey;
 
         } catch (S3Exception e) {
             log.error("S3 수정 중 오류 발생: {}", fileKey, e);
@@ -183,12 +178,12 @@ public class S3UploaderService {
      * S3 버킷에 저장된 파일의 URL을 생성
      * - 클라이언트에 단순 반환하는 용도
      */
-    public String buildFileUrl(String fileKey) {
+    /*public String buildFileUrl(String fileKey) {
         if (fileKey == null || fileKey.isEmpty()) {
             return null;
         }
         return String.format("https://%s.s3.%s.amazonaws.com/%s", s3Bucket, s3BucketRegion.id(), fileKey);
-    }
+    }*/
 
 
 }
