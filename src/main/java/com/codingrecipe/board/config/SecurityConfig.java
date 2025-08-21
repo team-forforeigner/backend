@@ -54,6 +54,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**", "/login/oauth2/**", "/oauth-redirect").permitAll() // 인증/로그인 API: 모든 사용자가 접근 가능
                 .requestMatchers(HttpMethod.GET, "/api/boards", "/api/boards/**").permitAll() // 게시판 조회 API(GET): 모든 사용자가 접근 가능
                 .requestMatchers(HttpMethod.POST, "/api/analyze").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/banners").permitAll() // 배너 조회 API(GET): 모든 사용자가 접근 가능
                 .requestMatchers(HttpMethod.GET, "/api/tips").permitAll()
                 .anyRequest().authenticated()); // 그 외 모든 API: 인증된 사용자만 접근 가능
 
