@@ -7,15 +7,14 @@ import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jdbc.datasource.init.DataSourceInitializer;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
-
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.jdbc.datasource.init.DataSourceInitializer;
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 
 import javax.sql.DataSource;
 import java.util.HashMap;
@@ -30,20 +29,20 @@ import java.util.Map;
 )
 public class SurvivalDBConfig {
 
-//    @Primary
+    @Primary
     @Bean(name = "survivalProperties")
     @ConfigurationProperties(prefix = "spring.datasource.survival")
     public DataSourceProperties survivalProperties() {
         return new DataSourceProperties();
     }
 
-//    @Primary
+    @Primary
     @Bean(name = "survivalDataSource")
     public DataSource survivalDataSource(@Qualifier("survivalProperties") DataSourceProperties properties) {
         return properties.initializeDataSourceBuilder().build();
     }
 
-//    @Primary
+    @Primary
     @Bean(name = "survivalEntityManagerFactory")
     public LocalContainerEntityManagerFactoryBean entityManagerFactory(
             EntityManagerFactoryBuilder builder,
@@ -51,7 +50,6 @@ public class SurvivalDBConfig {
 
         Map<String, String> properties = new HashMap<>();
         properties.put("hibernate.hbm2ddl.auto", "update");
-        // Hibernate 6.x 부터는 MySQL8Dialect 보다 MySQLDialect 사용을 권장합니다.
         properties.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
 
         return builder
@@ -62,7 +60,7 @@ public class SurvivalDBConfig {
                 .build();
     }
 
-//    @Primary
+    @Primary
     @Bean(name = "survivalTransactionManager")
     public PlatformTransactionManager transactionManager(
             @Qualifier("survivalEntityManagerFactory") LocalContainerEntityManagerFactoryBean entityManagerFactory) {
@@ -72,7 +70,7 @@ public class SurvivalDBConfig {
     @Bean
     public DataSourceInitializer survivalDataSourceInitializer(@Qualifier("survivalDataSource") DataSource survivalDataSource) {
         ResourceDatabasePopulator resourceDatabasePopulator = new ResourceDatabasePopulator();
-        resourceDatabasePopulator.addScript(new ClassPathResource("data-community.sql"));
+        resourceDatabasePopulator.addScript(new ClassPathResource("data.sql"));
 
         DataSourceInitializer dataSourceInitializer = new DataSourceInitializer();
         dataSourceInitializer.setDataSource(survivalDataSource);
