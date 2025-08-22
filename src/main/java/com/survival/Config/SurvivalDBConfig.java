@@ -70,7 +70,7 @@ public class SurvivalDBConfig {
     @Bean
     public DataSourceInitializer survivalDataSourceInitializer(@Qualifier("survivalDataSource") DataSource survivalDataSource) {
         ResourceDatabasePopulator resourceDatabasePopulator = new ResourceDatabasePopulator();
-        resourceDatabasePopulator.addScript(new ClassPathResource("data.sql"));
+        resourceDatabasePopulator.addScript(new ClassPathResource("data-survival.sql"));
 
         DataSourceInitializer dataSourceInitializer = new DataSourceInitializer();
         dataSourceInitializer.setDataSource(survivalDataSource);
