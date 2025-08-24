@@ -1,4 +1,3 @@
-// Spring Security, JWT, OAuth2, CORS 관련 보안 설정 관리
 package com.codingrecipe.board.config;
 
 import com.codingrecipe.board.security.CustomOAuth2UserService;
@@ -42,21 +41,18 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()));
-
-        // HTTPS로 리디렉션 방지
-        http.requiresChannel(channel -> channel.anyRequest().requiresInsecure());
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .requiresChannel(channel -> channel.anyRequest().requiresInsecure());
 
 
-        // --- API 경로별 접근 권한 규칙을 더 세분화 ---
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                // 로그인 없이 접근 가능한 API 목록
+                // ▼▼▼ [추가] 서바이벌 API에 대한 인증 규칙 추가 ▼▼▼
+                .requestMatchers("/api/survival/**").authenticated()
+                // ▲▲▲ [추가] 서바이벌 API에 대한 인증 규칙 추가 ▲▲▲
                 .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify", "/api/auth/reset-password").permitAll()
                 .requestMatchers("/login/oauth2/**", "/oauth-redirect").permitAll()
-                // 게시판 조회는 누구나 가능
                 .requestMatchers(HttpMethod.GET, "/api/boards", "/api/boards/**").permitAll()
-                // 위에서 지정하지 않은 나머지 모든 API는 인증(로그인)이 필요함
                 .anyRequest().authenticated());
 
         http.oauth2Login(oauth2 -> oauth2
@@ -77,8 +73,6 @@ public class SecurityConfig {
                 "http://forforeigner.com.s3-website.ap-northeast-2.amazonaws.com",
                 "https://forforeigner.site",
                 "http://forforeigner.site",
-
-                // 변경된 서버 IP 주소
                 "http://3.39.22.172"
         ));
 
