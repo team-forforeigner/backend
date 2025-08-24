@@ -34,7 +34,7 @@ public class EmailService {
      */
     public void sendVerificationEmail(Member member) {
         // 이메일 인증용 JWT 토큰 생성
-        String token = jwtUtil.generateToken(member.getEmail(), member.getRole().name());
+        String token = jwtUtil.generateToken(member.getEmail());
         String verificationLink = baseUrl + "?token=" + token;
 
         // 이메일 템플릿에 인증 링크와 사용자 이름을 채워 HTML 내용 생성

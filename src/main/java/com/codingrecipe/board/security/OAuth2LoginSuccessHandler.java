@@ -47,7 +47,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         // 추출한 이메일로 JWT 토큰 생성
-        String token = jwtUtil.generateToken(email, member.getRole().name());
+        String token = jwtUtil.generateToken(email);
         log.info("발급된 JWT 토큰: {}", token);
 
         // 프론트엔드 리다이렉트 URL에 토큰을 쿼리 파라미터로 추가
