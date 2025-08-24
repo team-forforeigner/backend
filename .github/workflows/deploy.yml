@@ -2,7 +2,7 @@ name: Deploy Backend to EC2
 on:
   push:
     branches: # 배포 기준이 되는 브랜치
-      - release/5th
+      - release/6th
 
 jobs:
   deploy:
@@ -45,24 +45,26 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           script: |
             echo "⚡ 서버 재시작 시작"
-            
-            mkdir -p /home/ec2-user/app 
-            
-            # 기존 프로세스 종료 (8080 포트 기준)
-            fuser -k 8080/tcp || true
-            sleep 3
-            
+
+            mkdir -p /home/ec2-user/app
+
             # 새로운 JAR 덮어쓰기
             mv /home/ec2-user/temp/build/libs/app.jar /home/ec2-user/app/app.jar
-            
-            cd /home/ec2-user/app
-            
-            # 새 JAR 실행
-            nohup java -jar app.jar > app.log 2>&1 &
-            
+
+            # 권한 조정 (필요하다면)
+            chmod 755 /home/ec2-user/app/app.jar
+
+            # systemd 서비스 재시작
+            sudo systemctl daemon-reload
+            sudo systemctl restart forforeigner.service
+            sudo systemctl enable forforeigner.service
+
+            # 상태 확인
+            sudo systemctl status forforeigner.service --no-pager -l
+
             # 임시 폴더 삭제
             rm -rf /home/ec2-user/temp
-            
+
             echo "✅ 배포 완료"
     
 
