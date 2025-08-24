@@ -105,7 +105,9 @@ public class MemberService {
             throw new CustomException(ErrorCode.USER_SUSPENDED);
         }
 
-        return jwtUtil.generateToken(member.getEmail());
+        String role = member.getRole().name();
+
+        return jwtUtil.generateToken(member.getEmail(), role);
     }
 
     /**
