@@ -35,12 +35,8 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * HTTP 요청에 대한 보안 필터 체인을 설정
-     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        // 서버 기본 인증 및 세션 정책 설정
         http
                 .csrf(csrf -> csrf.disable()) // CSRF 보호 비활성화
                 .formLogin(form -> form.disable()) // 기본 폼 로그인 비활성화
@@ -50,9 +46,11 @@ public class SecurityConfig {
 
         // --- API 경로별 접근 권한 규칙을 더 세분화 ---
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // [추가!] 브라우저의 preflight 요청(OPTIONS)은 모든 사용자에게 허용
                 .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자 API: '/api/admin/**' 경로는 'ADMIN' 역할을 가진 사용자만 접근 가능
-                .requestMatchers("/api/auth/**", "/login/oauth2/**", "/oauth-redirect").permitAll() // 인증/로그인 API: 모든 사용자가 접근 가능
+                // 로그인 없이 접근 가능한 API 목록
+                .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify", "/api/auth/reset-password").permitAll()
+                .requestMatchers("/login/oauth2/**", "/oauth-redirect").permitAll() // 인증/로그인 API: 모든 사용자가 접근 가능
+
                 .requestMatchers(HttpMethod.GET, "/api/boards", "/api/boards/**").permitAll() // 게시판 조회 API(GET): 모든 사용자가 접근 가능
                 .requestMatchers(HttpMethod.POST, "/api/analyze").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/banners").permitAll() // 배너 조회 API(GET): 모든 사용자가 접근 가능
@@ -77,8 +75,9 @@ public class SecurityConfig {
                 "http://forforeigner.com.s3-website.ap-northeast-2.amazonaws.com",
                 "https://forforeigner.site",
                 "https://ai.navoodiai.site",
-                "https://forforeigner.site",
-                "http://forforeigner.site"
+
+                // 변경된 서버 IP 주소
+                "http://3.39.22.172"
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
