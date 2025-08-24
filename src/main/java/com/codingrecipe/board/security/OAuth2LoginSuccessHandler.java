@@ -27,7 +27,8 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final MemberRepository memberRepository;
     private final JwtUtil jwtUtil;
 
-    @Value("${app.redirect-url}")
+//    @Value("${app.redirect-url}")
+    @Value("${app.redirect-url-dev}")
     private String redirectUrl;
 
     /**
