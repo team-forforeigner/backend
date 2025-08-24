@@ -1,6 +1,10 @@
 // 소셜 로그인(OAuth2) 성공 후의 로직을 처리하는 핸들러
 package com.codingrecipe.board.security;
 
+import com.codingrecipe.board.domain.Member;
+import com.codingrecipe.board.exception.CustomException;
+import com.codingrecipe.board.exception.ErrorCode;
+import com.codingrecipe.board.repository.MemberRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
+    private final MemberRepository memberRepository;
     private final JwtUtil jwtUtil;
 
     @Value("${app.redirect-url}")
@@ -37,8 +42,12 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         // 사용자 정보에서 이메일 추출
         String email = oAuth2User.getName();
 
+        // DB에서 사용자 조회
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
         // 추출한 이메일로 JWT 토큰 생성
-        String token = jwtUtil.generateToken(email);
+        String token = jwtUtil.generateToken(email, member.getRole().name());
         log.info("발급된 JWT 토큰: {}", token);
 
         // 프론트엔드 리다이렉트 URL에 토큰을 쿼리 파라미터로 추가
