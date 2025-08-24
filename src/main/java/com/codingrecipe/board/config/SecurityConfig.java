@@ -42,11 +42,10 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .requiresChannel(channel -> channel.anyRequest().requiresInsecure());
-
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
         http.authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // [추가] Preflight 허용
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 // ▼▼▼ [추가] 서바이벌 API에 대한 인증 규칙 추가 ▼▼▼
                 .requestMatchers("/api/survival/**").authenticated()
