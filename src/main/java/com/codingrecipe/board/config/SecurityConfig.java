@@ -77,6 +77,7 @@ public class SecurityConfig {
                 "http://forforeigner.com.s3-website.ap-northeast-2.amazonaws.com",
                 "https://forforeigner.site",
                 "https://ai.navoodiai.site",
+                "https://api.forforeigner.site",
 
                 // 변경된 서버 IP 주소
                 "http://3.39.22.172"
