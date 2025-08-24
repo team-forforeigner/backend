@@ -107,7 +107,7 @@ public class MemberService {
 
         String role = member.getRole().name();
 
-        return jwtUtil.generateToken(member.getEmail());
+        return jwtUtil.generateToken(member.getEmail(), role);
     }
 
     /**
