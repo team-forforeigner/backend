@@ -73,16 +73,19 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000", // 개발 환경 (프론트엔드)
-                "http://forforeigner.com.s3-website.ap-northeast-2.amazonaws.com",
+                "http://localhost:3000", // 프론트엔드 (로컬 개발)
+                "http://forforeigner.com.s3-website.ap-northeast-2.amazonaws.com", // S3 정적 웹 호스팅
                 "https://forforeigner.site",
-                "https://ai.navoodiai.site",
+                "https://ai.navoodiai.site", // AI
 
                 "https://api.forforeigner.site",
                 "http://api.forforeigner.site",
 
-                // 변경된 서버 IP 주소
-                "http://3.39.22.172"
+                "http://3.39.22.172", // 서버 IP (테스트)
+
+                // [추가] OAuth2 리다이렉트 URI
+                "http://localhost:3000/oauth-redirect", // 개발
+                "https://forforeigner.site/oauth-redirect" // 운영
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
