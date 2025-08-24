@@ -38,16 +38,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // CSRF 보호 비활성화
-                .formLogin(form -> form.disable()) // 기본 폼 로그인 비활성화
-                .httpBasic(basic -> basic.disable()) // HTTP Basic 인증 비활성화
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 세션을 사용하지 않는 stateless 설정
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())); // CORS 설정 적용
+                .csrf(csrf -> csrf.disable())
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .requiresChannel(channel -> channel.anyRequest().requiresInsecure());
 
-        // --- API 경로별 접근 권한 규칙을 더 세분화 ---
+
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자 API: '/api/admin/**' 경로는 'ADMIN' 역할을 가진 사용자만 접근 가능
-                // 로그인 없이 접근 가능한 API 목록
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                // ▼▼▼ [추가] 서바이벌 API에 대한 인증 규칙 추가 ▼▼▼
+                .requestMatchers("/api/survival/**").authenticated()
+                // ▲▲▲ [추가] 서바이벌 API에 대한 인증 규칙 추가 ▲▲▲
                 .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify", "/api/auth/reset-password").permitAll()
                 .requestMatchers("/login/oauth2/**", "/oauth-redirect").permitAll() // 인증/로그인 API: 모든 사용자가 접근 가능
 
