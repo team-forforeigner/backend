@@ -79,7 +79,7 @@ public class SecurityConfig {
                 "http://forforeigner.site",
 
                 // 변경된 서버 IP 주소
-                "http://13.209.98.159"
+                "http://3.39.22.172"
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));

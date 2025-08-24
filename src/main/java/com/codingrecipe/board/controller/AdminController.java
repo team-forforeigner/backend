@@ -6,6 +6,7 @@ import com.codingrecipe.board.dto.*;
 import com.codingrecipe.board.exception.ErrorCode;
 import com.codingrecipe.board.repository.ReportRepository;
 import com.codingrecipe.board.service.*;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -66,7 +67,7 @@ public class AdminController {
 
     // --- 퀴즈 관리 ---
     @PostMapping("/quizzes")
-    public ResponseEntity<ApiResponseDto<QuizDetailResponse>> createQuiz(@RequestBody QuizCreateRequest request) {
+    public ResponseEntity<ApiResponseDto<QuizDetailResponse>> createQuiz(@Valid @RequestBody QuizCreateRequest request) { // @Valid 추가
         QuizDetailResponse createdQuiz = quizService.createQuiz(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseDto.success(createdQuiz));
     }
@@ -84,7 +85,7 @@ public class AdminController {
     }
 
     @PutMapping("/quizzes/{quizId}")
-    public ResponseEntity<ApiResponseDto<QuizDetailResponse>> updateQuiz(@PathVariable Long quizId, @RequestBody QuizCreateRequest request) {
+    public ResponseEntity<ApiResponseDto<QuizDetailResponse>> updateQuiz(@PathVariable Long quizId, @Valid @RequestBody QuizCreateRequest request) { // @Valid 추가
         QuizDetailResponse updatedQuiz = quizService.updateQuiz(quizId, request);
         return ResponseEntity.ok(ApiResponseDto.success(updatedQuiz));
     }
