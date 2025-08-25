@@ -1,5 +1,3 @@
-// [최종 수정본] com/codingrecipe/board/repository/CommentRepository.java
-
 package com.codingrecipe.board.repository;
 
 import com.codingrecipe.board.domain.CommentEntity;

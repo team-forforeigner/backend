@@ -17,7 +17,6 @@ public class CommentEntity extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // --- 작성자를 Member 엔티티와 연결 ---
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member writer;
@@ -45,7 +44,6 @@ public class CommentEntity extends BaseEntity {
         return commentEntity;
     }
 
-    // --- 댓글 내용 수정을 위한 메소드 ---
     public void update(String newContents) {
         this.commentContents = newContents;
     }
