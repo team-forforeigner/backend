@@ -6,6 +6,7 @@ import com.codingrecipe.board.service.CommentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,8 +18,11 @@ public class CommentController {
     private final CommentService commentService;
 
     @PostMapping("/save")
-    public ResponseEntity<ApiResponseDto<List<CommentDTO>>> save(@RequestBody CommentDTO commentDTO) {
-        commentService.save(commentDTO);
+    public ResponseEntity<ApiResponseDto<List<CommentDTO>>> save(
+            @AuthenticationPrincipal String email,
+            @RequestBody CommentDTO commentDTO) {
+        // 서비스의 save 메소드에 인증된 사용자 email을 넘겨줍니다.
+        commentService.save(email, commentDTO);
         List<CommentDTO> commentDTOList = commentService.findAll(commentDTO.getBoardId());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseDto.success(commentDTOList));
     }
@@ -27,5 +31,24 @@ public class CommentController {
     public ResponseEntity<ApiResponseDto<List<CommentDTO>>> findAll(@PathVariable Long boardId) {
         List<CommentDTO> commentDTOList = commentService.findAll(boardId);
         return ResponseEntity.ok(ApiResponseDto.success(commentDTOList));
+    }
+
+    // --- 댓글 수정 API ---
+    @PutMapping("/{commentId}")
+    public ResponseEntity<ApiResponseDto<CommentDTO>> update(
+            @PathVariable Long commentId,
+            @AuthenticationPrincipal String email,
+            @RequestBody CommentDTO commentDTO) {
+        CommentDTO updatedComment = commentService.update(commentId, email, commentDTO);
+        return ResponseEntity.ok(ApiResponseDto.success(updatedComment));
+    }
+
+    // --- 댓글 삭제 API ---
+    @DeleteMapping("/{commentId}")
+    public ResponseEntity<ApiResponseDto<Void>> delete(
+            @PathVariable Long commentId,
+            @AuthenticationPrincipal String email) {
+        commentService.delete(commentId, email);
+        return ResponseEntity.ok(ApiResponseDto.success("댓글이 성공적으로 삭제되었습니다."));
     }
 }

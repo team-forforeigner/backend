@@ -47,9 +47,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // [추가] Preflight 허용
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                // ▼▼▼ [추가] 서바이벌 API에 대한 인증 규칙 추가 ▼▼▼
                 .requestMatchers("/api/survival/**").authenticated()
-                // ▲▲▲ [추가] 서바이벌 API에 대한 인증 규칙 추가 ▲▲▲
                 .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify", "/api/auth/reset-password").permitAll()
                 .requestMatchers("/login/oauth2/**", "/oauth-redirect").permitAll() // 인증/로그인 API: 모든 사용자가 접근 가능
 
