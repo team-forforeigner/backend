@@ -47,9 +47,7 @@ public class SecurityConfig {
 
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                // ▼▼▼ [추가] 서바이벌 API에 대한 인증 규칙 추가 ▼▼▼
                 .requestMatchers("/api/survival/**").authenticated()
-                // ▲▲▲ [추가] 서바이벌 API에 대한 인증 규칙 추가 ▲▲▲
                 .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify", "/api/auth/reset-password").permitAll()
                 .requestMatchers("/login/oauth2/**", "/oauth-redirect").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/boards", "/api/boards/**").permitAll()
