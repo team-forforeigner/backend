@@ -10,6 +10,7 @@ import com.codingrecipe.board.repository.BoardRepository;
 import com.codingrecipe.board.repository.CommentRepository;
 import com.codingrecipe.board.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -27,6 +29,7 @@ public class CommentService {
     private final MemberRepository memberRepository;
 
     public void save(String email, CommentDTO commentDTO) {
+        log.info("댓글 저장 시작. 작성자 이메일: {}", email);
         Member writer = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
@@ -41,10 +44,12 @@ public class CommentService {
 
         CommentEntity commentEntity = CommentEntity.toSaveEntity(commentDTO, boardEntity, writer, parentComment);
         commentRepository.save(commentEntity);
+        log.info("댓글 저장 완료. 댓글 ID: {}", commentEntity.getId());
     }
 
     @Transactional(readOnly = true)
     public List<CommentDTO> findAll(Long boardId) {
+        // [수정] N+1 문제가 해결된 새로운 메소드를 호출하도록 변경
         List<CommentEntity> commentEntityList = commentRepository.findAllByBoardIdWithWriter(boardId);
 
         Map<Long, CommentDTO> commentDTOMap = new HashMap<>();
@@ -88,7 +93,6 @@ public class CommentService {
         if (commentEntity.getWriter() == null || !commentEntity.getWriter().getEmail().equals(email)) {
             throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
         }
-
         commentRepository.delete(commentEntity);
     }
 

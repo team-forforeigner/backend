@@ -21,7 +21,6 @@ public class CommentController {
     public ResponseEntity<ApiResponseDto<List<CommentDTO>>> save(
             @AuthenticationPrincipal String email,
             @RequestBody CommentDTO commentDTO) {
-        // 서비스의 save 메소드에 인증된 사용자 email을 넘겨줍니다.
         commentService.save(email, commentDTO);
         List<CommentDTO> commentDTOList = commentService.findAll(commentDTO.getBoardId());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseDto.success(commentDTOList));
@@ -33,7 +32,6 @@ public class CommentController {
         return ResponseEntity.ok(ApiResponseDto.success(commentDTOList));
     }
 
-    // --- 댓글 수정 API ---
     @PutMapping("/{commentId}")
     public ResponseEntity<ApiResponseDto<CommentDTO>> update(
             @PathVariable Long commentId,
@@ -43,7 +41,6 @@ public class CommentController {
         return ResponseEntity.ok(ApiResponseDto.success(updatedComment));
     }
 
-    // --- 댓글 삭제 API ---
     @DeleteMapping("/{commentId}")
     public ResponseEntity<ApiResponseDto<Void>> delete(
             @PathVariable Long commentId,
