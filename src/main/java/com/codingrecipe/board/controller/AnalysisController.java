@@ -50,7 +50,7 @@ public class AnalysisController {
         String s3Url = s3UploaderService.map(uploader -> {
             try {
                 // 기존의 upload 메소드를 사용합니다.
-                return uploader.upload(imageFile, "images");
+                return uploader.uploadImage(imageFile, "chatbot");
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
