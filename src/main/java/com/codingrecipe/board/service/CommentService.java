@@ -45,7 +45,6 @@ public class CommentService {
 
     @Transactional(readOnly = true)
     public List<CommentDTO> findAll(Long boardId) {
-        // --- [수정] N+1 문제가 해결된 새로운 메소드를 호출합니다. ---
         List<CommentEntity> commentEntityList = commentRepository.findAllByBoardIdWithWriter(boardId);
 
         Map<Long, CommentDTO> commentDTOMap = new HashMap<>();
