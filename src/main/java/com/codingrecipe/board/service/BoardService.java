@@ -77,7 +77,7 @@ public class BoardService {
             try {
                 log.info("S3 비동기 업로드를 시작합니다. 스레드: {}", Thread.currentThread().getName());
                 String originalFilename = boardFile.getOriginalFilename();
-                String storedFileName = uploader.upload(boardFile, "images");
+                String storedFileName = uploader.uploadImage(boardFile, "community");
 
                 // 비동기 작업 내에서 DB에 접근하려면 다시 엔티티를 조회해야 할 수 있습니다.
                 BoardEntity boardToUpdate = boardRepository.findById(savedEntity.getId())
@@ -161,7 +161,7 @@ public class BoardService {
         s3UploaderService.ifPresent(uploader -> {
             if (boardEntity.getFileAttached() == 1 && boardEntity.getBoardFileEntityList() != null && !boardEntity.getBoardFileEntityList().isEmpty()) {
                 String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
-                uploader.delete(storedFileName);
+                uploader.deleteImage(storedFileName);
             }
         });
 
@@ -214,7 +214,7 @@ public class BoardService {
         s3UploaderService.ifPresent(uploader -> {
             if (boardEntity.getFileAttached() == 1 && boardEntity.getBoardFileEntityList() != null && !boardEntity.getBoardFileEntityList().isEmpty()) {
                 String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
-                uploader.delete(storedFileName);
+                uploader.deleteImage(storedFileName);
             }
         });
 
