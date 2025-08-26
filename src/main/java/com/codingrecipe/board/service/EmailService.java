@@ -18,6 +18,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
+// 동기문제로 인해 발생한 email 발송 씹힘 현상을 해결 == 비동기로 변경 후 리스너를 추가하여 메일 전송이 확실하게 일어나도록 함
+
+import com.codingrecipe.board.event.UserRegistrationEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -35,15 +43,29 @@ public class EmailService {
      * --- @Async 어노테이션 추가 ---
      * MemberService에서 이 메소드를 호출하면, 실제 메일 발송을 기다리지 않고 즉시 다음 코드로 진행됩니다.
      */
+//    @Async("threadPoolTaskExecutor")
+//    public void sendVerificationEmail(Member member) {
+//        log.info("{}님에게 인증 메일을 비동기로 발송합니다. 스레드: {}", member.getEmail(), Thread.currentThread().getName());
+//        String token = jwtUtil.generateToken(member.getEmail(), member.getRole().name());
+//        String verificationLink = baseUrl + "?token=" + token;
+//
+//        String htmlContent = generateEmailTemplate(verificationLink, member.getNickname());
+//        sendEmail(member.getEmail(), VERIFICATION_SUBJECT, htmlContent);
+//        log.info("{}님에게 인증 메일 비동기 발송 완료.", member.getEmail());
+//    } // => 아래 추가된 handleUserRegistration으로 대신합니다. ...
+
     @Async("threadPoolTaskExecutor")
-    public void sendVerificationEmail(Member member) {
-        log.info("{}님에게 인증 메일을 비동기로 발송합니다. 스레드: {}", member.getEmail(), Thread.currentThread().getName());
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleUserRegistration(UserRegistrationEvent event) {
+        Member member = event.getMember();
+        log.info("{}님에게 인증 메일을 비동기로 발송합니다. (이벤트 리스너) 스레드: {}", member.getEmail(), Thread.currentThread().getName());
+
         String token = jwtUtil.generateToken(member.getEmail(), member.getRole().name());
         String verificationLink = baseUrl + "?token=" + token;
-
         String htmlContent = generateEmailTemplate(verificationLink, member.getNickname());
+
         sendEmail(member.getEmail(), VERIFICATION_SUBJECT, htmlContent);
-        log.info("{}님에게 인증 메일 비동기 발송 완료.", member.getEmail());
+        log.info("{}님에게 인증 메일 비동기 발송 완료. (이벤트 리스너)", member.getEmail());
     }
 
     /**
