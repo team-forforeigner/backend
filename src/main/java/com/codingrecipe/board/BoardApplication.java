@@ -10,7 +10,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @SpringBootApplication
 @EnableAsync
 @EnableJpaAuditing
-@EnableAutoConfiguration(exclude = S3AutoConfiguration.class)
 public class BoardApplication {
 
 	public static void main(String[] args) {
