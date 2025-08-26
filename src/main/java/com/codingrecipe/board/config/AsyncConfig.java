@@ -15,11 +15,11 @@ public class AsyncConfig {
     public Executor threadPoolTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         // 기본 스레드 수
-        executor.setCorePoolSize(7);
+        executor.setCorePoolSize(5);
         // 최대 스레드 수
-        executor.setMaxPoolSize(12);
+        executor.setMaxPoolSize(10);
         // 큐 용량
-        executor.setQueueCapacity(100);
+        executor.setQueueCapacity(80);
         // 스레드 이름 접두사
         executor.setThreadNamePrefix("Async-");
         executor.initialize();
