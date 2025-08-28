@@ -2,6 +2,7 @@ package com.codingrecipe.board.util;
 
 import com.codingrecipe.board.dto.ApiResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 
 /**
@@ -28,5 +29,11 @@ public class ApiResponseUtil {
         return ResponseEntity.status(status)
                 .body(ApiResponse.fail(status.value(), message));
     }
+
+    public static <T> ResponseEntity<ApiResponse<T>> fail(HttpStatusCode statusCode, String message) {
+        return ResponseEntity.status(statusCode.value())
+                .body(ApiResponse.fail(statusCode.value(), message));
+    }
+
 
 }

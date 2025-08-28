@@ -132,7 +132,7 @@ INSERT IGNORE INTO choice (episode_id, next_episode_id, choice_description) VALU
 (1, 65, JSON_OBJECT('text', '여의도 벚꽃축제')), (1, 2, JSON_OBJECT('text', '진해 군항제')),
 -- 군항제
 (2, 3, JSON_OBJECT('text', '필요한 준비물을 체크하기')), (2, 3, JSON_OBJECT('text', '귀찮으니까 난 가서 다 살래!')),
-(3, 4, JSON_OBJECT('text', '군악대 퍼레이드, 야간 조명')), (3, 4, JSON_OBJECT('text', '야간 조명)), 
+(3, 4, JSON_OBJECT('text', '군악대 퍼레이드, 야간 조명')), (3, 4, JSON_OBJECT('text', '야간 조명')),
 -- 벚꽃축제
 (65,  66, JSON_OBJECT('text', '필요한 준비물을 체크하기')), (65, 66, JSON_OBJECT('text', '귀찮으니까 난 가서 다 살래!')),
 (66, 4, JSON_OBJECT('text', '푸드트럭')), (66, 4, JSON_OBJECT('text', '거리 공연')), (66, 4, JSON_OBJECT('text', '앉아서 꽃 구경하기')),
