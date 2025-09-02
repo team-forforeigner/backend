@@ -54,7 +54,7 @@ public class ImageController {
      * 이미지 조회 (바이트 배열로 반환)
      */
     @GetMapping("/view")
-    public ResponseEntity<ApiResponse<byte[]>> getImage(@RequestParam String fileKey) {
+    public ResponseEntity<ApiResponse<byte[]>> getImage(@RequestParam("fileKey") String fileKey) {
         log.info("이미지 요청: {}", fileKey);
 
         try {
@@ -83,8 +83,7 @@ public class ImageController {
     @PutMapping
     public ResponseEntity<ApiResponse<Map<String, String>>> updateImage(
             @RequestParam String fileKey,
-            @RequestParam("file") MultipartFile newFile,
-            @RequestParam(value = "category", defaultValue = "default") String category
+            @RequestParam("file") MultipartFile newFile
     ) {
         if (newFile.isEmpty()) {
             log.warn("이미지 수정 실패 - 새 파일 비어 있음");
@@ -92,7 +91,7 @@ public class ImageController {
         }
 
         try {
-            String newFileKey = s3UploaderService.updateImage(fileKey, newFile, category);
+            String newFileKey = s3UploaderService.updateImage(fileKey, newFile, "test");
             log.info("이미지 수정 성공: {} -> {}", fileKey, newFileKey);
             return ApiResponseUtil.ok(Map.of("fileKey", newFileKey), "이미지 수정 성공");
         } catch (Exception e) {

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -73,16 +74,30 @@ public class S3UploaderService {
         String fileKey = String.format("uploads/%s/%s/%s%s", category, yyyyMM, uuid, extension);
 
         try (InputStream is = file.getInputStream()) {
-            s3Client.putObject(PutObjectRequest.builder()
+            s3Client.putObject(
+                    PutObjectRequest.builder()
                             .bucket(s3Bucket)
                             .key(fileKey)
                             .contentType(file.getContentType())
                             .build(),
-                    RequestBody.fromInputStream(is, file.getSize()));
+                    RequestBody.fromInputStream(is, file.getSize())
+            );
+            return fileKey;
+        } catch (software.amazon.awssdk.services.s3.model.S3Exception e) {
+            // S3에서 응답을 제대로 받았지만 권한/버킷 정책 문제 등
+            log.error("S3 업로드 실패 (버킷={}, 파일 키={}) - {}", s3Bucket, fileKey, e.awsErrorDetails().errorMessage(), e);
+            throw e;
+        } catch (SdkClientException e) {
+            // 네트워크 문제, 자격 증명 문제 등
+            log.error("S3 SDK 클라이언트 오류 (버킷={}, 파일 키={})", s3Bucket, fileKey, e);
+            throw e;
+        } catch (Exception e) {
+            // 기타 예외
+            log.error("알 수 없는 오류 발생 (버킷={}, 파일 키={})", s3Bucket, fileKey, e);
+            throw e;
         }
-
-        return fileKey;
     }
+
 
     /**
      * S3에서 파일을 다운로드하고 InputStream(바이트)으로 반환
