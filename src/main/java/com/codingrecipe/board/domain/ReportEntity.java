@@ -36,6 +36,13 @@ public class ReportEntity {
     @Column(updatable = false)
     private LocalDateTime reportedAt; // 신고가 접수된 시간
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ReportStatus status = ReportStatus.PENDING; // 기본값 PENDING
+
+    @Column(length = 1000)
+    private String adminMemo; // 관리자 메모
+
     // 저장되기 전, 신고 시간을 현재 시간으로 자동 설정
     @PrePersist
     public void reportedAt() {

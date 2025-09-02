@@ -8,7 +8,10 @@ import com.codingrecipe.board.repository.ReportRepository;
 import com.codingrecipe.board.service.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +27,7 @@ import java.util.stream.Collectors;
 public class AdminController {
 
     private final ReportRepository reportRepository;
+    private final ReportService reportService; // ReportService 주입
     private final BannerService bannerService;
     private final QuizService quizService;
     private final MemberService memberService;
@@ -32,9 +36,19 @@ public class AdminController {
 
     // --- 신고 관리 ---
     @GetMapping("/reports")
-    public ResponseEntity<ApiResponseDto<List<ReportEntity>>> getAllReports() {
+    public ResponseEntity<ApiResponseDto<List<ReportAdminResponseDto>>> getAllReports() {
         List<ReportEntity> reports = reportRepository.findAll(Sort.by(Sort.Direction.DESC, "reportedAt"));
-        return ResponseEntity.ok(ApiResponseDto.success(reports));
+        List<ReportAdminResponseDto> reportDtos = reports.stream()
+                .map(ReportAdminResponseDto::new)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponseDto.success(reportDtos));
+    }
+
+    // --- [추가] 신고 상태 및 메모 업데이트 API ---
+    @PatchMapping("/reports/{reportId}")
+    public ResponseEntity<ApiResponseDto<Void>> updateReportStatus(@PathVariable Long reportId, @RequestBody ReportStatusUpdateRequestDto dto) {
+        reportService.updateReportStatus(reportId, dto);
+        return ResponseEntity.ok(ApiResponseDto.success("신고 상태가 업데이트되었습니다."));
     }
 
     // --- 배너 관리 ---
@@ -133,6 +147,27 @@ public class AdminController {
     }
 
     // --- 게시글/댓글 관리 ---
+    // --- 게시글 목록 및 상세 조회 API ---
+    @GetMapping("/boards")
+    public ResponseEntity<ApiResponseDto<Page<BoardDTO>>> getAllBoards(
+            @PageableDefault(page = 0, size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<BoardDTO> boardPage = boardService.paging(pageable);
+        return ResponseEntity.ok(ApiResponseDto.success(boardPage));
+    }
+
+    @GetMapping("/boards/{id}")
+    public ResponseEntity<ApiResponseDto<BoardDTO>> getBoardById(@PathVariable Long id) {
+        BoardDTO boardDTO = boardService.findById(id);
+        return ResponseEntity.ok(ApiResponseDto.success(boardDTO));
+    }
+
+    // --- [추가] 댓글 목록 조회 API ---
+    @GetMapping("/comments/{boardId}")
+    public ResponseEntity<ApiResponseDto<List<CommentDTO>>> getCommentsByBoardId(@PathVariable Long boardId) {
+        List<CommentDTO> comments = commentService.findAll(boardId);
+        return ResponseEntity.ok(ApiResponseDto.success(comments));
+    }
+
     @DeleteMapping("/boards/{id}")
     public ResponseEntity<ApiResponseDto<Void>> deleteBoard(@PathVariable Long id) {
         boardService.deleteBoardByAdmin(id);

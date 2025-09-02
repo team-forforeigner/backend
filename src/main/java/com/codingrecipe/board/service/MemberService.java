@@ -7,17 +7,16 @@ import com.codingrecipe.board.dto.EmailRequestDto;
 import com.codingrecipe.board.dto.PasswordChangeRequest;
 import com.codingrecipe.board.dto.SignUpRequestDto;
 import com.codingrecipe.board.dto.UserInfoDto;
-import com.codingrecipe.board.event.UserRegistrationEvent;
 import com.codingrecipe.board.exception.CustomException;
 import com.codingrecipe.board.exception.ErrorCode;
 import com.codingrecipe.board.repository.MemberRepository;
 import com.codingrecipe.board.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,8 +29,6 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final JwtUtil jwtUtil;
-    private final ApplicationEventPublisher eventPublisher;
-
 
     /**
      * 회원가입 처리 로직
@@ -47,15 +44,13 @@ public class MemberService {
                 throw new CustomException(ErrorCode.ALREADY_EXIST_EMAIL);
             } else {
                 updateUnverifiedMember(existingMember, dto);
-                // emailService.sendVerificationEmail(existingMember);
-                eventPublisher.publishEvent(new UserRegistrationEvent(existingMember));
+                emailService.sendVerificationEmail(existingMember);
                 return;
             }
         }
         Member newMember = createNewMember(dto);
         Member savedMember = memberRepository.save(newMember);
-        //emailService.sendVerificationEmail(savedMember);
-        eventPublisher.publishEvent(new UserRegistrationEvent(savedMember));
+        emailService.sendVerificationEmail(savedMember);
     }
 
     /**
@@ -111,9 +106,8 @@ public class MemberService {
             throw new CustomException(ErrorCode.USER_SUSPENDED);
         }
 
-        String role = member.getRole().name();
-
-        return jwtUtil.generateToken(member.getEmail(), role);
+        member.setLastLoginAt(LocalDateTime.now());
+        return jwtUtil.generateToken(member.getEmail());
     }
 
     /**

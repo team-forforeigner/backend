@@ -3,6 +3,9 @@ package com.codingrecipe.board.service;
 
 import com.codingrecipe.board.dto.ReportDTO;
 import com.codingrecipe.board.domain.ReportEntity;
+import com.codingrecipe.board.dto.ReportStatusUpdateRequestDto; // DTO 임포트
+import com.codingrecipe.board.exception.CustomException; // CustomException 임포트
+import com.codingrecipe.board.exception.ErrorCode; // ErrorCode 임포트
 import com.codingrecipe.board.repository.ReportRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -10,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ReportService {
 
     private final ReportRepository reportRepository;
@@ -36,5 +40,14 @@ public class ReportService {
         }
 
         reportRepository.save(reportEntity);
+    }
+
+
+    public void updateReportStatus(Long reportId, ReportStatusUpdateRequestDto dto) {
+        ReportEntity report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND)); // 적절한 ErrorCode로 변경 필요
+
+        report.setStatus(dto.getStatus());
+        report.setAdminMemo(dto.getAdminMemo());
     }
 }

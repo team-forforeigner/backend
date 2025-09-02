@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @Table(name = "member")
-public class Member {
+public class Member extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -73,6 +74,8 @@ public class Member {
     private String visa;
     private String phone;
     private String korName;
+    private LocalDateTime lastLoginAt;
+
 
     public Member update(String nickname, String picture) {
         this.nickname = nickname;
