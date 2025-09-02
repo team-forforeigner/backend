@@ -3,6 +3,7 @@ package com.codingrecipe.board.service;
 import com.codingrecipe.board.util.FileUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -32,8 +33,13 @@ import java.util.*;
 public class S3UploaderService {
 
     private final S3Client s3Client;
+
+    @Value("${cloud.aws.s3.bucket-name}")
     private final String s3Bucket;
+
+    @Value("${cloud.aws.region.static}")
     private final Region s3BucketRegion;
+
     private final S3Presigner s3Presigner;
 
     /**

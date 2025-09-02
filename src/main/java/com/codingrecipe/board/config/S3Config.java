@@ -22,16 +22,6 @@ public class S3Config {
     @Value("${cloud.aws.region.static}")
     private String region; // AWS 리전(지역)
 
-    @Bean
-    public String s3Bucket() {
-        return bucket;
-    }
-
-    @Bean
-    public Region s3BucketRegion() {
-        return Region.of(region);
-    }
-
     /**
      * S3와 통신하기 위한 클라이언트 빈을 생성
      * 파일 업로드, 삭제 등 S3의 기본 작업을 처리
