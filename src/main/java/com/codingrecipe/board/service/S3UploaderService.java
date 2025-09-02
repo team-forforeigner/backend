@@ -35,10 +35,10 @@ public class S3UploaderService {
     private final S3Client s3Client;
 
     @Value("${cloud.aws.s3.bucket-name}")
-    private final String s3Bucket;
+    private String s3Bucket;
 
     @Value("${cloud.aws.region.static}")
-    private final Region s3BucketRegion;
+    private Region s3BucketRegion;
 
     private final S3Presigner s3Presigner;
 
