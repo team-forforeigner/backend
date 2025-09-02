@@ -7,11 +7,13 @@ import com.codingrecipe.board.dto.EmailRequestDto;
 import com.codingrecipe.board.dto.PasswordChangeRequest;
 import com.codingrecipe.board.dto.SignUpRequestDto;
 import com.codingrecipe.board.dto.UserInfoDto;
+import com.codingrecipe.board.event.UserRegistrationEvent;
 import com.codingrecipe.board.exception.CustomException;
 import com.codingrecipe.board.exception.ErrorCode;
 import com.codingrecipe.board.repository.MemberRepository;
 import com.codingrecipe.board.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final JwtUtil jwtUtil;
+    private final ApplicationEventPublisher applicationEventPublisher; // 추가
 
     /**
      * 회원가입 처리 로직
@@ -44,13 +47,15 @@ public class MemberService {
                 throw new CustomException(ErrorCode.ALREADY_EXIST_EMAIL);
             } else {
                 updateUnverifiedMember(existingMember, dto);
-                emailService.sendVerificationEmail(existingMember);
+//                emailService.sendVerificationEmail(existingMember);
+                applicationEventPublisher.publishEvent(new UserRegistrationEvent(existingMember)); // 이벤트 발행
                 return;
             }
         }
         Member newMember = createNewMember(dto);
         Member savedMember = memberRepository.save(newMember);
-        emailService.sendVerificationEmail(savedMember);
+//        emailService.sendVerificationEmail(savedMember);
+        applicationEventPublisher.publishEvent(new UserRegistrationEvent(savedMember)); // 이벤트 발행
     }
 
     /**
@@ -107,7 +112,7 @@ public class MemberService {
         }
 
         member.setLastLoginAt(LocalDateTime.now());
-        return jwtUtil.generateToken(member.getEmail());
+        return jwtUtil.generateToken(member.getEmail(), member.getRole().name());
     }
 
     /**
