@@ -38,8 +38,8 @@ public class EmailService {
     @Async("threadPoolTaskExecutor")
     public void sendVerificationEmail(Member member) {
         log.info("{}님에게 인증 메일을 비동기로 발송합니다. 스레드: {}", member.getEmail(), Thread.currentThread().getName());
-        // [수정] 변경된 generateToken 메소드 시그니처에 맞게 member.getRole()을 추가로 전달합니다.
-        String token = jwtUtil.generateToken(member.getEmail(), member.getRole());
+        // [수정] Member 객체 자체를 넘겨서 토큰을 생성하도록 변경
+        String token = jwtUtil.generateToken(member);
         String verificationLink = baseUrl + "?token=" + token;
 
         String htmlContent = generateEmailTemplate(verificationLink, member.getNickname());
@@ -56,6 +56,7 @@ public class EmailService {
         String subject = "[For-Foreigner] 임시 비밀번호 안내입니다";
         String htmlText = "<h1>임시 비밀번호 안내</h1>"
                 + "<p>로그인 후, 반드시 비밀번호를 변경해주세요</p>"
+
                 + "<p>임시 비밀번호: <strong>" + tempPassword + "</strong></p>";
         sendEmail(email, subject, htmlText);
         log.info("{}님에게 임시 비밀번호 비동기 발송 완료.", email);
@@ -91,3 +92,4 @@ public class EmailService {
         }
     }
 }
+

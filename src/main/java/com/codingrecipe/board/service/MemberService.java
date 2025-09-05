@@ -53,18 +53,12 @@ public class MemberService {
         emailService.sendVerificationEmail(savedMember);
     }
 
-    /**
-     * 미인증 사용자의 정보를 업데이트
-     */
     private void updateUnverifiedMember(Member member, SignUpRequestDto dto) {
         member.setPassword(passwordEncoder.encode(dto.getPassword()));
         member.setNationality(dto.getNationality());
         member.setNickname(dto.getEmail());
     }
 
-    /**
-     * 신규 회원 엔티티를 생성
-     */
     private Member createNewMember(SignUpRequestDto dto) {
         return Member.builder()
                 .email(dto.getEmail())
@@ -76,9 +70,6 @@ public class MemberService {
                 .build();
     }
 
-    /**
-     * 이메일 인증 토큰을 검증하여 회원 상태를 '인증 완료'로 변경
-     */
     public void verifyEmailByToken(String token) {
         String email = jwtUtil.getEmail(token);
         Member member = memberRepository.findByEmail(email)
@@ -87,7 +78,7 @@ public class MemberService {
     }
 
     /**
-     * 로그인 처리 및 JWT 토큰 발급 (수정)
+     * 로그인 처리 및 JWT 토큰 발급
      */
     @Transactional
     public String login(String email, String password) {
@@ -107,13 +98,9 @@ public class MemberService {
         }
 
         member.setLastLoginAt(LocalDateTime.now());
-        // [수정] 토큰 생성 시, 사용자의 실제 Role 정보를 함께 전달합니다.
-        return jwtUtil.generateToken(member.getEmail(), member.getRole());
+        return jwtUtil.generateToken(member);
     }
 
-    /**
-     * 임시 비밀번호를 생성하여 이메일로 발송
-     */
     public void sendTempPassword(EmailRequestDto dto) {
         Member member = memberRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -122,9 +109,6 @@ public class MemberService {
         emailService.sendTempPasswordEmail(dto.getEmail(), tempPassword);
     }
 
-    /**
-     * 현재 로그인된 사용자의 비밀번호를 변경
-     */
     public void changePassword(String email, PasswordChangeRequest dto) {
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -138,9 +122,6 @@ public class MemberService {
         member.setPassword(passwordEncoder.encode(dto.getNewPassword()));
     }
 
-    /**
-     * 이메일로 사용자 정보를 조회하여 DTO로 반환
-     */
     @Transactional(readOnly = true)
     public UserInfoDto getMemberInfoByEmail(String email) {
         Member member = memberRepository.findByEmail(email)
@@ -148,42 +129,27 @@ public class MemberService {
         return new UserInfoDto(member);
     }
 
-    /**
-     * 이메일로 사용자 엔티티를 조회 (내부 로직용)
-     */
     @Transactional(readOnly = true)
     public Member findMemberByEmail(String email) {
         return memberRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 
-    /**
-     * 사용자의 닉네임을 변경
-     */
     public void updateNickname(String email, String newNickname) {
         Member member = findMemberByEmail(email);
         member.setNickname(newNickname);
     }
 
-    /**
-     * 모든 회원 목록을 조회 (관리자용)
-     */
     @Transactional(readOnly = true)
     public List<Member> findMembers() {
         return memberRepository.findAll();
     }
 
-    /**
-     * ID로 특정 회원 정보를 조회 (관리자용)
-     */
     @Transactional(readOnly = true)
     public Optional<Member> findOne(Long memberId) {
         return memberRepository.findById(memberId);
     }
 
-    /**
-     * 관리자가 특정 회원을 ID로 삭제합니다.
-     */
     public void deleteMemberByAdmin(Long memberId) {
         if (!memberRepository.existsById(memberId)) {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
@@ -191,21 +157,14 @@ public class MemberService {
         memberRepository.deleteById(memberId);
     }
 
-    /**
-     * 관리자가 이메일 시작 문자로 회원을 검색합니다.
-     */
     @Transactional(readOnly = true)
     public List<Member> searchMembersByEmail(String emailKeyword) {
         return memberRepository.findByEmailStartingWith(emailKeyword);
     }
 
-    /**
-     * 관리자가 회원의 상태(활성/정지)를 변경합니다.
-     */
     public void updateMemberStatus(Long memberId, MemberStatus status) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         member.setStatus(status);
     }
 }
-

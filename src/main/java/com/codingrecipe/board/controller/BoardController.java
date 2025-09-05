@@ -3,6 +3,7 @@ package com.codingrecipe.board.controller;
 import com.codingrecipe.board.dto.ApiResponseDto;
 import com.codingrecipe.board.dto.BoardDTO;
 import com.codingrecipe.board.dto.LikeResponseDTO;
+import com.codingrecipe.board.security.UserPrincipal; // UserPrincipal 임포트
 import com.codingrecipe.board.service.BoardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,8 +27,9 @@ public class BoardController {
 
     @PostMapping
     public ResponseEntity<ApiResponseDto<Long>> save(@ModelAttribute BoardDTO boardDTO,
-                                                     @AuthenticationPrincipal String email) throws IOException {
-        Long savedId = boardService.save(boardDTO, email);
+                                                     // [수정] String email 대신 UserPrincipal 객체를 받습니다.
+                                                     @AuthenticationPrincipal UserPrincipal user) throws IOException {
+        Long savedId = boardService.save(boardDTO, user.getEmail());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseDto.success(savedId));
     }
 
@@ -45,9 +47,9 @@ public class BoardController {
     }
 
     @GetMapping("/my-posts")
-    public ResponseEntity<ApiResponseDto<Page<BoardDTO>>> findMyPosts(@AuthenticationPrincipal String email,
+    public ResponseEntity<ApiResponseDto<Page<BoardDTO>>> findMyPosts(@AuthenticationPrincipal UserPrincipal user,
                                                                       @PageableDefault(page = 0, size = 5, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<BoardDTO> boardPage = boardService.pagingByWriter(email, pageable);
+        Page<BoardDTO> boardPage = boardService.pagingByWriter(user.getEmail(), pageable);
         return ResponseEntity.ok(ApiResponseDto.success(boardPage));
     }
 
@@ -73,28 +75,28 @@ public class BoardController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponseDto<Void>> update(@PathVariable Long id,
                                                        @RequestBody BoardDTO boardDTO,
-                                                       @AuthenticationPrincipal String email) {
-        boardService.update(id, boardDTO, email);
+                                                       @AuthenticationPrincipal UserPrincipal user) {
+        boardService.update(id, boardDTO, user.getEmail());
         return ResponseEntity.ok(ApiResponseDto.success("게시글이 수정되었습니다."));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponseDto<Void>> delete(@PathVariable("id") Long boardId,
-                                                       @AuthenticationPrincipal String email) {
-        boardService.delete(boardId, email);
+                                                       @AuthenticationPrincipal UserPrincipal user) {
+        boardService.delete(boardId, user.getEmail());
         return ResponseEntity.ok(ApiResponseDto.success("게시글이 삭제되었습니다."));
     }
 
     @PostMapping("/{id}/like")
     public ResponseEntity<ApiResponseDto<LikeResponseDTO>> likeBoard(@PathVariable("id") Long boardId,
-                                                                     @AuthenticationPrincipal String email) {
-        LikeResponseDTO response = boardService.toggleLike(boardId, email);
+                                                                     @AuthenticationPrincipal UserPrincipal user) {
+        LikeResponseDTO response = boardService.toggleLike(boardId, user.getEmail());
         return ResponseEntity.ok(ApiResponseDto.success(response));
     }
 
     @GetMapping("/my-likes")
-    public ResponseEntity<ApiResponseDto<List<BoardDTO>>> getMyLikedPosts(@AuthenticationPrincipal String email) {
-        List<BoardDTO> myLikedPosts = boardService.getMyLikedPosts(email);
+    public ResponseEntity<ApiResponseDto<List<BoardDTO>>> getMyLikedPosts(@AuthenticationPrincipal UserPrincipal user) {
+        List<BoardDTO> myLikedPosts = boardService.getMyLikedPosts(user.getEmail());
         return ResponseEntity.ok(ApiResponseDto.success(myLikedPosts));
     }
 }

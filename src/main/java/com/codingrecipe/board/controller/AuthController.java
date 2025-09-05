@@ -2,6 +2,7 @@ package com.codingrecipe.board.controller;
 
 import com.codingrecipe.board.dto.*;
 import com.codingrecipe.board.security.JwtUtil;
+import com.codingrecipe.board.security.UserPrincipal; // UserPrincipal 임포트
 import com.codingrecipe.board.service.LogoutService;
 import com.codingrecipe.board.service.MemberService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,8 +22,10 @@ public class AuthController {
     private final JwtUtil jwtUtil;
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponseDto<UserInfoDto>> getMyInfo(@AuthenticationPrincipal String email) {
-        UserInfoDto userInfo = memberService.getMemberInfoByEmail(email);
+    // [수정] String email 대신 UserPrincipal 객체를 받습니다.
+    public ResponseEntity<ApiResponseDto<UserInfoDto>> getMyInfo(@AuthenticationPrincipal UserPrincipal user) {
+        // [수정] UserPrincipal에서 직접 정보를 가져옵니다.
+        UserInfoDto userInfo = memberService.getMemberInfoByEmail(user.getEmail());
         return ResponseEntity.ok(ApiResponseDto.success(userInfo));
     }
 
@@ -52,9 +55,10 @@ public class AuthController {
 
     @PutMapping("/password")
     public ResponseEntity<ApiResponseDto<Void>> changePassword(
-            @AuthenticationPrincipal String email,
+            // [수정] String email 대신 UserPrincipal 객체를 받습니다.
+            @AuthenticationPrincipal UserPrincipal user,
             @RequestBody PasswordChangeRequest request) {
-        memberService.changePassword(email, request);
+        memberService.changePassword(user.getEmail(), request);
         return ResponseEntity.ok(ApiResponseDto.success("비밀번호가 성공적으로 변경되었습니다."));
     }
 
