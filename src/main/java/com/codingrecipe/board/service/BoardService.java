@@ -95,7 +95,6 @@ public class BoardService {
         return CompletableFuture.completedFuture(null);
     }
 
-
     // ... (이하 다른 메서드들은 변경 없음) ...
     @Transactional(readOnly = true)
     public Page<BoardDTO> paging(Pageable pageable) {
@@ -126,9 +125,8 @@ public class BoardService {
 
         s3UploaderService.ifPresent(uploader -> {
             if (boardEntity.getFileAttached() == 1 && !boardEntity.getBoardFileEntityList().isEmpty()) {
-                String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
-                String fileUrl = uploader.generatePresignedUrl(storedFileName);
-                boardDTO.setFileUrl(fileUrl);
+                String fileKey = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
+                boardDTO.setFileUrl(fileKey);
             }
         });
         return boardDTO;
