@@ -57,20 +57,15 @@ public class AnalysisController {
 
         System.out.println("S3 업로드 완료. fileKey: " + fileKey);
 
-        // S3에 업로드된 파일의 완전한 URL을 생성합니다.
+        // 최종 응답에 담길 S3 Presigned URL 생성
         String s3Url = s3UploaderService.map(uploader -> uploader.generatePresignedUrl(fileKey))
                 .orElse("s3-disabled-in-local");
 
 
-        // --- 2. AI 서버로 보낼 이미지 바이트 데이터 준비 ---
-        byte[] imageBytes;
-        if (s3UploaderService.isPresent()) {
-            // S3가 활성화된 경우, S3에서 파일을 다시 다운로드하여 바이트를 얻습니다.
-            imageBytes = s3UploaderService.get().downloadAsBytes(fileKey);
-        } else {
-            // local 환경일 경우, 업로드된 MultipartFile에서 직접 바이트를 얻습니다.
-            imageBytes = imageFile.getBytes();
-        }
+        // --- 2. 바이트 배열 추출 (S3에서 읽기) ---
+        byte[] imageBytes = s3UploaderService
+                .map(uploader -> uploader.downloadAsBytes(fileKey))
+                .orElse(imageFile.getBytes()); // local이면 그냥 업로드된 파일 사용
 
         WebClient webClient = webClientBuilder.baseUrl("https://ai.navoodiai.site").build();
 
@@ -79,17 +74,20 @@ public class AnalysisController {
         builder.part("file", new ByteArrayResource(imageBytes) {
             @Override
             public String getFilename() {
-                // 원본 파일 이름을 지정해줘야 AI 서버가 파일을 인식할 수 있습니다.
                 return imageFile.getOriginalFilename();
             }
         });
 
-        // --- 4. YOLO 분석 요청 (AI 서버) ---
+        // ★★★★★ 1. 변경된 부분 ★★★★★
+        // 'type' 파라미터를 요청 본문(form-data)에 추가합니다.
+        builder.part("type", type);
+
+
+        // --- 4. YOLO 분석 요청 ---
         return webClient.post()
-                // AI 서버로 요청 시 'type' 쿼리 파라미터를 추가
-                .uri(uriBuilder -> uriBuilder.path("/api/analyze")
-                        .queryParam("type", type)
-                        .build())
+                // ★★★★★ 2. 변경된 부분 ★★★★★
+                // URI를 만들 때 더 이상 URL에 쿼리 파라미터(?type=...)를 추가하지 않습니다.
+                .uri(uriBuilder -> uriBuilder.path("/api/analyze").build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .header("CF-Access-Client-Id", accessClientId)
                 .header("CF-Access-Client-Secret", accessClientSecret)
@@ -98,7 +96,6 @@ public class AnalysisController {
                 .bodyToMono(AnalysisResponse.class)
                 .flatMap(aiResponse -> {
                     List<String> detectedObjects = aiResponse.detectedObjects();
-                    System.out.println("YOLO 탐지 결과: " + detectedObjects);
 
                     if (detectedObjects == null || detectedObjects.isEmpty()) {
                         FinalResponseDTO response = new FinalResponseDTO(s3Url, detectedObjects, "탐지된 객체가 없습니다.");
@@ -107,21 +104,19 @@ public class AnalysisController {
 
                     String targetObject = detectedObjects.get(0);
 
-                    // --- 5. 설명 요청 (AI 서버) ---
-                    // 설명 요청 시에도 'type' 쿼리 파라미터 추가
+                    // --- 5. 설명 요청 ---
                     return webClient.post()
                             .uri(uriBuilder -> uriBuilder.path("/api/describe")
-                                    .queryParam("type", type)
+                                    .queryParam("type", type) // 설명 요청에는 type을 쿼리 파라미터로 전달
                                     .build())
                             .contentType(MediaType.APPLICATION_JSON)
                             .header("CF-Access-Client-Id", accessClientId)
                             .header("CF-Access-Client-Secret", accessClientSecret)
                             .body(BodyInserters.fromValue("{\"object_name\":\"" + targetObject + "\"}"))
                             .retrieve()
-                            .bodyToMono(DescriptionResponse.class) // 응답을 DTO로 받도록 수정
+                            .bodyToMono(DescriptionResponse.class)
                             .map(descriptionResponse -> {
                                 String description = descriptionResponse.description();
-                                System.out.println("AI 설명 결과: " + description);
                                 FinalResponseDTO finalResponse = new FinalResponseDTO(s3Url, detectedObjects, description);
                                 return ApiResponseDto.success(finalResponse);
                             });
