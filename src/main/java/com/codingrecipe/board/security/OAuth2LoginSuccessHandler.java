@@ -1,11 +1,13 @@
-// 소셜 로그인(OAuth2) 성공 후의 로직을 처리하는 핸들러
 package com.codingrecipe.board.security;
 
+import com.codingrecipe.board.domain.Role;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -21,8 +23,11 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
     private final JwtUtil jwtUtil;
 
+    @Value("${oauth.redirect-url}")
+    private String redirectUrl;
+
     /**
-     * OAuth2 인증 성공 시 호출되는 메서드
+     * OAuth2 인증 성공 시 호출되는 메서드 (수정)
      */
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
@@ -33,12 +38,20 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         // 사용자 정보에서 이메일 추출
         String email = oAuth2User.getName();
 
-        // 추출한 이메일로 JWT 토큰 생성
-        String token = jwtUtil.generateToken(email);
-        log.info("발급된 JWT 토큰: {}", token);
+        // Spring Security의 인증 정보에서 사용자의 Role을 동적으로 추출합니다.
+        String roleKey = authentication.getAuthorities().stream()
+                .findFirst() // 첫 번째 권한을 가져옴 (USER 또는 ADMIN)
+                .map(GrantedAuthority::getAuthority)
+                .orElse(Role.USER.getKey()); // 권한이 없는 경우 기본값으로 USER 설정
+
+        Role role = Role.valueOf(roleKey.replace("ROLE_", ""));
+
+        // 이메일과 동적으로 얻어온 역할을 함께 전달하여 토큰을 생성합니다.
+        String token = jwtUtil.generateToken(email, role);
+        log.info("발급된 JWT 토큰 (Role: {}): {}", role.name(), token);
 
         // 프론트엔드 리다이렉트 URL에 토큰을 쿼리 파라미터로 추가
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/oauth-redirect")
+        String targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
                 .queryParam("token", token)
                 .build()
                 .encode(StandardCharsets.UTF_8)

@@ -87,9 +87,9 @@ public class MemberService {
     }
 
     /**
-     * 로그인 처리 및 JWT 토큰 발급
+     * 로그인 처리 및 JWT 토큰 발급 (수정)
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public String login(String email, String password) {
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.LOGIN_FAILED));
@@ -107,7 +107,8 @@ public class MemberService {
         }
 
         member.setLastLoginAt(LocalDateTime.now());
-        return jwtUtil.generateToken(member.getEmail());
+        // [수정] 토큰 생성 시, 사용자의 실제 Role 정보를 함께 전달합니다.
+        return jwtUtil.generateToken(member.getEmail(), member.getRole());
     }
 
     /**
@@ -207,3 +208,4 @@ public class MemberService {
         member.setStatus(status);
     }
 }
+

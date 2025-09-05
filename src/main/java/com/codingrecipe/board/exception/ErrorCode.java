@@ -23,13 +23,14 @@ public enum ErrorCode {
     USER_SUSPENDED(HttpStatus.FORBIDDEN, "정지된 계정입니다."),
 
     // 404 Not Found
-    // NOT_FOUND 상수 뒤의 세미콜론(;)을 쉼표(,)로 수정했습니다.
     NOT_FOUND(HttpStatus.NOT_FOUND, "해당 정보를 찾을 수 없습니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
     BOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "카테고리를 찾을 수 없습니다."),
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
     BANNER_NOT_FOUND(HttpStatus.NOT_FOUND, "배너를 찾을 수 없습니다."),
+    // 신고 정보를 찾을 수 없을 때 사용할 명확한 에러 코드를 추가합니다.
+    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "신고 정보를 찾을 수 없습니다."),
     SCRAP_NOT_FOUND(HttpStatus.NOT_FOUND, "스크랩 정보를 찾을 수 없습니다."),
     LIKE_NOT_FOUND(HttpStatus.NOT_FOUND, "좋아요 정보를 찾을 수 없습니다."),
 
@@ -38,7 +39,7 @@ public enum ErrorCode {
 
     // 500 Internal Server Error
     S3_FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S3 파일 업로드에 실패했습니다."),
-    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버에 오류가 발생했습니다."); // <-- 모든 상수가 끝나는 여기에만 세미콜론을 씁니다.
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버에 오류가 발생했습니다.");
 
 
     private final HttpStatus status;

@@ -4,7 +4,7 @@ import com.codingrecipe.board.domain.*;
 import com.codingrecipe.board.dto.*;
 import com.codingrecipe.board.exception.CustomException;
 import com.codingrecipe.board.exception.ErrorCode;
-import com.codingrecipe.board.exception.NotFoundException;
+// import com.codingrecipe.board.exception.NotFoundException; // [삭제] NotFoundException 임포트 제거
 import com.codingrecipe.board.repository.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -36,7 +36,7 @@ public class SurvivalServiceImpl implements SurvivalService {
     @Transactional(readOnly = true)
     public SeriesListResponseDTO getSeriesList(Long categoryId) {
         SurvivalCategoryEntity category = survivalCategoryRepository.findByCategoryId(categoryId)
-                .orElseThrow(() -> new NotFoundException("카테고리를 찾을 수 없습니다: " + categoryId));
+                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
         List<SeriesItemDTO> seriesList = category.getSeriesList().stream()
                 .map(seriesEntity -> new SeriesItemDTO(seriesEntity.getSeriesId(), seriesEntity.getTitle()))
@@ -55,8 +55,8 @@ public class SurvivalServiceImpl implements SurvivalService {
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        ChoicesEntity choice = choicesRepository.findByChoiceId(choiceId)
-                .orElseThrow(() -> new NotFoundException("선택지를 찾을 수 없습니다: " + choiceId));
+        ChoicesEntity choice = choicesRepository.findById(choiceId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
         UserProgressEntity userProgress = UserProgressEntity.builder()
                 .member(member)
@@ -81,21 +81,21 @@ public class SurvivalServiceImpl implements SurvivalService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         SeriesEntity series = seriesRepository.findById(seriesId)
-                .orElseThrow(() -> new NotFoundException("시리즈를 찾을 수 없습니다: " + seriesId));
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
         userProgressRepository.deleteByMember_IdAndSeries_SeriesId(member.getId(), seriesId);
 
         return series.getEpisodes().stream()
                 .min(Comparator.comparing(EpisodesEntity::getOrderSeries))
                 .map(EpisodesEntity::getEpisodeId)
-                .orElseThrow(() -> new NotFoundException("시리즈에 에피소드가 없습니다: " + seriesId));
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
     }
 
     @Override
     @Transactional(readOnly = true)
     public EpisodeResponseDTO getEpisode(Long episodeId) {
-        EpisodesEntity episodeEntity = episodesRepository.findByEpisodeId(episodeId)
-                .orElseThrow(() -> new NotFoundException("에피소드를 찾을 수 없습니다."));
+        EpisodesEntity episodeEntity = episodesRepository.findById(episodeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
         EpisodeResponseDTO dto = new EpisodeResponseDTO();
         dto.setEpisodeId(episodeEntity.getEpisodeId());
@@ -153,7 +153,7 @@ public class SurvivalServiceImpl implements SurvivalService {
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         SeriesEntity series = seriesRepository.findById(seriesId)
-                .orElseThrow(() -> new NotFoundException("시리즈를 찾을 수 없습니다: " + seriesId));
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
         if (userSeriesCompletionRepository.findByMemberAndSeries_SeriesId(member, seriesId).isPresent()) {
             return false;

@@ -38,7 +38,8 @@ public class EmailService {
     @Async("threadPoolTaskExecutor")
     public void sendVerificationEmail(Member member) {
         log.info("{}님에게 인증 메일을 비동기로 발송합니다. 스레드: {}", member.getEmail(), Thread.currentThread().getName());
-        String token = jwtUtil.generateToken(member.getEmail());
+        // [수정] 변경된 generateToken 메소드 시그니처에 맞게 member.getRole()을 추가로 전달합니다.
+        String token = jwtUtil.generateToken(member.getEmail(), member.getRole());
         String verificationLink = baseUrl + "?token=" + token;
 
         String htmlContent = generateEmailTemplate(verificationLink, member.getNickname());

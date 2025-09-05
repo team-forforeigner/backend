@@ -1,7 +1,6 @@
 package com.codingrecipe.board.controller;
 
 import com.codingrecipe.board.domain.Member;
-import com.codingrecipe.board.domain.ReportEntity;
 import com.codingrecipe.board.dto.*;
 import com.codingrecipe.board.exception.ErrorCode;
 import com.codingrecipe.board.repository.ReportRepository;
@@ -26,8 +25,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/admin")
 public class AdminController {
 
-    private final ReportRepository reportRepository;
-    private final ReportService reportService; // ReportService 주입
+    private final ReportService reportService;
     private final BannerService bannerService;
     private final QuizService quizService;
     private final MemberService memberService;
@@ -37,14 +35,10 @@ public class AdminController {
     // --- 신고 관리 ---
     @GetMapping("/reports")
     public ResponseEntity<ApiResponseDto<List<ReportAdminResponseDto>>> getAllReports() {
-        List<ReportEntity> reports = reportRepository.findAll(Sort.by(Sort.Direction.DESC, "reportedAt"));
-        List<ReportAdminResponseDto> reportDtos = reports.stream()
-                .map(ReportAdminResponseDto::new)
-                .collect(Collectors.toList());
+        List<ReportAdminResponseDto> reportDtos = reportService.findAllReportsForAdmin();
         return ResponseEntity.ok(ApiResponseDto.success(reportDtos));
     }
 
-    // --- [추가] 신고 상태 및 메모 업데이트 API ---
     @PatchMapping("/reports/{reportId}")
     public ResponseEntity<ApiResponseDto<Void>> updateReportStatus(@PathVariable Long reportId, @RequestBody ReportStatusUpdateRequestDto dto) {
         reportService.updateReportStatus(reportId, dto);
@@ -81,8 +75,8 @@ public class AdminController {
 
     // --- 퀴즈 관리 ---
     @PostMapping("/quizzes")
-    public ResponseEntity<ApiResponseDto<QuizDetailResponse>> createQuiz(@Valid @RequestBody QuizCreateRequest request) { // @Valid 추가
-        QuizDetailResponse createdQuiz = quizService.createQuiz(request);
+    public ResponseEntity<ApiResponseDto<QuizAdminDetailResponse>> createQuiz(@Valid @RequestBody QuizCreateRequest request) { // @Valid 추가
+        QuizAdminDetailResponse createdQuiz = quizService.createQuiz(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseDto.success(createdQuiz));
     }
 
@@ -93,14 +87,14 @@ public class AdminController {
     }
 
     @GetMapping("/quizzes/{quizId}")
-    public ResponseEntity<ApiResponseDto<QuizDetailResponse>> getQuizById(@PathVariable Long quizId) {
-        QuizDetailResponse quiz = quizService.findQuizDetailById(quizId);
+    public ResponseEntity<ApiResponseDto<QuizAdminDetailResponse>> getQuizById(@PathVariable Long quizId) {
+        QuizAdminDetailResponse quiz = quizService.findQuizDetailById(quizId);
         return ResponseEntity.ok(ApiResponseDto.success(quiz));
     }
 
     @PutMapping("/quizzes/{quizId}")
-    public ResponseEntity<ApiResponseDto<QuizDetailResponse>> updateQuiz(@PathVariable Long quizId, @Valid @RequestBody QuizCreateRequest request) { // @Valid 추가
-        QuizDetailResponse updatedQuiz = quizService.updateQuiz(quizId, request);
+    public ResponseEntity<ApiResponseDto<QuizAdminDetailResponse>> updateQuiz(@PathVariable Long quizId, @Valid @RequestBody QuizCreateRequest request) { // @Valid 추가
+        QuizAdminDetailResponse updatedQuiz = quizService.updateQuiz(quizId, request);
         return ResponseEntity.ok(ApiResponseDto.success(updatedQuiz));
     }
 
@@ -147,7 +141,6 @@ public class AdminController {
     }
 
     // --- 게시글/댓글 관리 ---
-    // --- 게시글 목록 및 상세 조회 API ---
     @GetMapping("/boards")
     public ResponseEntity<ApiResponseDto<Page<BoardDTO>>> getAllBoards(
             @PageableDefault(page = 0, size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -161,7 +154,6 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponseDto.success(boardDTO));
     }
 
-    // --- [추가] 댓글 목록 조회 API ---
     @GetMapping("/comments/{boardId}")
     public ResponseEntity<ApiResponseDto<List<CommentDTO>>> getCommentsByBoardId(@PathVariable Long boardId) {
         List<CommentDTO> comments = commentService.findAll(boardId);

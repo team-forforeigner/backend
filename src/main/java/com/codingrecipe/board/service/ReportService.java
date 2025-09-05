@@ -1,15 +1,19 @@
-// 게시글 또는 댓글 신고 관련 비즈니스 로직을 처리하는 서비스
 package com.codingrecipe.board.service;
 
-import com.codingrecipe.board.dto.ReportDTO;
 import com.codingrecipe.board.domain.ReportEntity;
-import com.codingrecipe.board.dto.ReportStatusUpdateRequestDto; // DTO 임포트
-import com.codingrecipe.board.exception.CustomException; // CustomException 임포트
-import com.codingrecipe.board.exception.ErrorCode; // ErrorCode 임포트
+import com.codingrecipe.board.dto.ReportAdminResponseDto;
+import com.codingrecipe.board.dto.ReportDTO;
+import com.codingrecipe.board.dto.ReportStatusUpdateRequestDto;
+import com.codingrecipe.board.exception.CustomException;
+import com.codingrecipe.board.exception.ErrorCode;
 import com.codingrecipe.board.repository.ReportRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,12 +46,26 @@ public class ReportService {
         reportRepository.save(reportEntity);
     }
 
-
+    /**
+     * 관리자가 신고의 상태와 메모를 업데이트
+     */
     public void updateReportStatus(Long reportId, ReportStatusUpdateRequestDto dto) {
         ReportEntity report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND)); // 적절한 ErrorCode로 변경 필요
+                .orElseThrow(() -> new CustomException(ErrorCode.REPORT_NOT_FOUND));
 
         report.setStatus(dto.getStatus());
         report.setAdminMemo(dto.getAdminMemo());
     }
+
+    /**
+     * 관리자 페이지를 위해 모든 신고 목록을 조회
+     */
+    @Transactional(readOnly = true)
+    public List<ReportAdminResponseDto> findAllReportsForAdmin() {
+        List<ReportEntity> reports = reportRepository.findAll(Sort.by(Sort.Direction.DESC, "reportedAt"));
+        return reports.stream()
+                .map(ReportAdminResponseDto::new)
+                .collect(Collectors.toList());
+    }
 }
+

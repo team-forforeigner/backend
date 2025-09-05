@@ -1,6 +1,6 @@
-// JWT 생성, 검증, 파싱 등 관련 유틸리티 클래스
 package com.codingrecipe.board.security;
 
+import com.codingrecipe.board.domain.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -36,7 +36,7 @@ public class JwtUtil {
     }
 
     /**
-     * 토큰에서 사용자 이메일(subject)을 추출
+     * 토큰에서 사용자 이메일을 추출
      */
     public String getEmail(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -71,12 +71,15 @@ public class JwtUtil {
     }
 
     /**
-     * 주어진 이메일로 새로운 JWT 토큰을 생성
+     * 주어진 이메일과 역할로 새로운 JWT 토큰을 생성
+     * @param email 사용자의 이메일
+     * @param role 사용자의 권한 (e.g., USER, ADMIN)
+     * @return 생성된 JWT 문자열
      */
-    public String generateToken(String email) {
+    public String generateToken(String email, Role role) {
         return Jwts.builder()
                 .setSubject(email) // 토큰의 주체로 이메일 설정
-                .claim("role", "USER") // 역할 정보 추가
+                .claim("role", role.getKey()) // 파라미터로 받은 실제 역할을 claim에 추가
                 .setIssuedAt(new Date(System.currentTimeMillis())) // 발급 시간 설정
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs)) // 만료 시간 설정
                 .signWith(secretKey, SignatureAlgorithm.HS256) // 비밀키로 서명
