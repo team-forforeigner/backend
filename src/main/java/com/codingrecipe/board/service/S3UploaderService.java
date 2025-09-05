@@ -38,7 +38,7 @@ public class S3UploaderService {
     private String bucket;
 
     /**
-     * S3 객체에 대한 미리 서명된 URL을 생성
+     * S3 객체에 대한 미리 서명된 URL(Presigned URL)을 생성
      */
     public String generatePresignedUrl(String fileKey) {
         if (fileKey == null || fileKey.isEmpty()) {
@@ -86,7 +86,7 @@ public class S3UploaderService {
     }
 
     /**
-     * S3에 저장된 파일을 byte 배열로 다운로드하는 메소드
+     * [추가] S3에 저장된 파일을 byte 배열로 다운로드하는 메소드
      */
     public byte[] downloadAsBytes(String fileKey) {
         try {
@@ -98,6 +98,7 @@ public class S3UploaderService {
             return objectBytes.asByteArray();
         } catch (Exception e) {
             log.error("S3 파일 다운로드 중 오류 발생: key={}", fileKey, e);
+            // 실제 프로덕션 코드에서는 더 구체적인 예외 처리가 필요할 수 있습니다.
             throw new RuntimeException("S3 파일 다운로드 실패", e);
         }
     }
@@ -134,7 +135,7 @@ public class S3UploaderService {
     }
 
     /**
-     * 전체 S3 URL에서 파일 키만 추출하는 헬퍼 메서드
+     * 전체 S3 URL에서 파일 키(경로)만 추출하는 헬퍼 메서드
      */
     public String extractFileKeyFromUrl(String fileUrl) {
         if(fileUrl == null || fileUrl.isBlank()){
@@ -149,3 +150,4 @@ public class S3UploaderService {
         }
     }
 }
+
