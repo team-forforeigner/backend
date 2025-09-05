@@ -51,25 +51,22 @@ public class ImageController {
     }
 
     /**
-     * 이미지 조회 (바이트 배열로 반환)
+     * 이미지 조회 (성공: 바이트 배열, 실패: ApiResponse JSON)
      */
     @GetMapping("/view")
-    public ResponseEntity<ApiResponse<byte[]>> getImage(@RequestParam("fileKey") String fileKey) {
+    public ResponseEntity<?> getImage(@RequestParam String fileKey) {
         log.info("이미지 요청: {}", fileKey);
 
         try {
             byte[] imageBytes = s3UploaderService.downloadAsBytes(fileKey);
-
-            // FileUtil로 MIME 타입 추출
             String mimeType = FileUtil.getMimeType(fileKey);
             MediaType mediaType = MediaType.parseMediaType(mimeType);
 
             log.info("이미지 조회 성공: {}", fileKey);
 
-            // ResponseEntity의 content-type은 그대로 MediaType 적용
             return ResponseEntity.ok()
                     .contentType(mediaType)
-                    .body(ApiResponse.success(imageBytes, "이미지 조회 성공", HttpStatus.OK.value()));
+                    .body(imageBytes);
 
         } catch (Exception e) {
             log.error("이미지 조회 실패: {}", fileKey, e);
@@ -86,7 +83,6 @@ public class ImageController {
             @RequestParam("file") MultipartFile newFile
     ) {
         if (newFile.isEmpty()) {
-            log.warn("이미지 수정 실패 - 새 파일 비어 있음");
             return ApiResponseUtil.badRequest("새 파일이 비어 있습니다.");
         }
 
@@ -117,5 +113,4 @@ public class ImageController {
             return ApiResponseUtil.fail(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 삭제 실패");
         }
     }
-
 }
