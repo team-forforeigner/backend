@@ -14,10 +14,14 @@ import java.util.List;
 @ToString
 public class CommentDTO {
     private Long id;
-    private String commentWriter; // 작성자 닉네임
+    private String commentWriter;
     private String commentContents;
     private Long boardId;
     private LocalDateTime commentCreatedTime;
+
+    // 프론트엔드 요청에 따라 게시글 제목과 카테고리명을 추가합니다.
+    private String boardTitle;
+    private String categoryName;
 
     private Long parentId;
     private List<CommentDTO> children = new ArrayList<>();
@@ -26,7 +30,6 @@ public class CommentDTO {
         CommentDTO commentDTO = new CommentDTO();
         commentDTO.setId(commentEntity.getId());
 
-        // --- Member 엔티티에서 닉네임을 가져오도록 변경 ---
         if (commentEntity.getWriter() != null) {
             commentDTO.setCommentWriter(commentEntity.getWriter().getNickname());
         } else {
@@ -35,7 +38,15 @@ public class CommentDTO {
 
         commentDTO.setCommentContents(commentEntity.getCommentContents());
         commentDTO.setCommentCreatedTime(commentEntity.getCreatedTime());
-        commentDTO.setBoardId(commentEntity.getBoardEntity().getId());
+
+        // 게시글 관련 정보도 함께 DTO에 담아줍니다.
+        if (commentEntity.getBoardEntity() != null) {
+            commentDTO.setBoardId(commentEntity.getBoardEntity().getId());
+            commentDTO.setBoardTitle(commentEntity.getBoardEntity().getBoardTitle());
+            if (commentEntity.getBoardEntity().getCategory() != null) {
+                commentDTO.setCategoryName(commentEntity.getBoardEntity().getCategory().getName());
+            }
+        }
 
         if (commentEntity.getParent() != null) {
             commentDTO.setParentId(commentEntity.getParent().getId());

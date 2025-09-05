@@ -24,11 +24,10 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final MemberRepository memberRepository;
     private final JwtUtil jwtUtil;
+    private final MemberRepository memberRepository;
 
     @Value("${app.redirect-url}")
-//    @Value("${app.redirect-url-dev}")
     private String redirectUrl;
 
     /**
@@ -43,15 +42,14 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         // 사용자 정보에서 이메일 추출
         String email = oAuth2User.getName();
 
-        // DB에서 사용자 조회
+        // 토큰에 모든 정보를 담기 위해 DB에서 Member 객체를 조회합니다. (로그인 시 딱 한 번만 실행)
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 추출한 이메일로 JWT 토큰 생성
-        String token = jwtUtil.generateToken(email, member.getRole().name());
-        log.info("발급된 JWT 토큰: {}", token);
+        // Member 객체 자체를 넘겨서 토큰을 생성하도록 변경
+        String token = jwtUtil.generateToken(member);
+        log.info("발급된 JWT 토큰 (Role: {}): {}", member.getRoleKey(), token);
 
-        // 프론트엔드 리다이렉트 URL에 토큰을 쿼리 파라미터로 추가
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUrl)
                 .queryParam("token", token)
                 .build()

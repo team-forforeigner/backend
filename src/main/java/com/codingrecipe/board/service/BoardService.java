@@ -21,7 +21,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-@Slf4j // --- [추가] 로그 사용을 위해 @Slf4j 추가 ---
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -32,6 +32,8 @@ public class BoardService {
     private final BoardFileRepository boardFileRepository;
     private final CategoryRepository categoryRepository;
     private final BoardLikeRepository boardLikeRepository;
+    private final CommentRepository commentRepository;
+    private final ScrapRepository scrapRepository;
     private final Optional<S3UploaderService> s3UploaderService;
 
     @Transactional
@@ -64,20 +66,19 @@ public class BoardService {
             boardEntity.setFileAttached(1);
             // --- [수정] S3 업로드 로직을 비동기로 호출 ---
             BoardEntity savedEntity = boardRepository.save(boardEntity);
-            uploadToS3AndSaveFile(boardFile, savedEntity); // 비동기 메소드 호출
+            uploadToS3AndSaveFile(boardFile, savedEntity);
             return savedEntity.getId();
         }
     }
 
-    // --- [추가] S3 업로드를 처리하는 비동기 메소드 ---
-    @Async("threadPoolTaskExecutor") // AsyncConfig에서 만든 스레드 풀을 사용
-    @Transactional // 비동기 메소드 내에서도 트랜잭션 관리가 필요
+    @Async("threadPoolTaskExecutor")
+    @Transactional
     public CompletableFuture<Void> uploadToS3AndSaveFile(MultipartFile boardFile, BoardEntity savedEntity) {
         s3UploaderService.ifPresent(uploader -> {
             try {
                 log.info("S3 비동기 업로드를 시작합니다. 스레드: {}", Thread.currentThread().getName());
                 String originalFilename = boardFile.getOriginalFilename();
-                String storedFileName = uploader.uploadImage(boardFile, "community");
+                String storedFileName = uploader.upload(boardFile, "images");
 
                 // 비동기 작업 내에서 DB에 접근하려면 다시 엔티티를 조회해야 할 수 있습니다.
                 BoardEntity boardToUpdate = boardRepository.findById(savedEntity.getId())
@@ -88,14 +89,12 @@ public class BoardService {
                 log.info("S3 비동기 업로드 및 파일 정보 저장이 완료되었습니다.");
             } catch (IOException e) {
                 log.error("S3 비동기 업로드 중 오류 발생", e);
-                // 비동기 예외 처리는 별도의 전략이 필요할 수 있습니다.
                 throw new CustomException(ErrorCode.S3_FILE_UPLOAD_FAILED);
             }
         });
         return CompletableFuture.completedFuture(null);
     }
 
-    // ... (이하 다른 메서드들은 변경 없음) ...
     @Transactional(readOnly = true)
     public Page<BoardDTO> paging(Pageable pageable) {
         Page<BoardEntity> boardEntities = boardRepository.findAll(pageable);
@@ -125,8 +124,9 @@ public class BoardService {
 
         s3UploaderService.ifPresent(uploader -> {
             if (boardEntity.getFileAttached() == 1 && !boardEntity.getBoardFileEntityList().isEmpty()) {
-                String fileKey = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
-                boardDTO.setFileUrl(fileKey);
+                String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
+                String fileUrl = uploader.generatePresignedUrl(storedFileName);
+                boardDTO.setFileUrl(fileUrl);
             }
         });
         return boardDTO;
@@ -156,13 +156,9 @@ public class BoardService {
             throw new CustomException(ErrorCode.FORBIDDEN_ACCESS);
         }
 
-        s3UploaderService.ifPresent(uploader -> {
-            if (boardEntity.getFileAttached() == 1 && boardEntity.getBoardFileEntityList() != null && !boardEntity.getBoardFileEntityList().isEmpty()) {
-                String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
-                uploader.deleteImage(storedFileName);
-            }
-        });
-
+        deleteS3FileIfAttached(boardEntity);
+        // 일반 사용자는 연관 데이터(좋아요, 스크랩 등)를 직접 삭제하지 않으므로
+        // 현재 BoardEntity의 @OneToMany에 cascade.REMOVE가 있으므로 그냥 삭제해도 동작함
         boardRepository.delete(boardEntity);
     }
     @Transactional(readOnly = true)
@@ -205,17 +201,30 @@ public class BoardService {
     private BoardDTO convertToDto(BoardEntity board) {
         return BoardDTO.toBoardDTO(board);
     }
+
     public void deleteBoardByAdmin(Long boardId) {
         BoardEntity boardEntity = boardRepository.findById(boardId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BOARD_NOT_FOUND));
 
-        s3UploaderService.ifPresent(uploader -> {
-            if (boardEntity.getFileAttached() == 1 && boardEntity.getBoardFileEntityList() != null && !boardEntity.getBoardFileEntityList().isEmpty()) {
-                String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
-                uploader.deleteImage(storedFileName);
-            }
-        });
+        // 1. S3 파일 삭제
+        deleteS3FileIfAttached(boardEntity);
 
+        // 2. 이 게시글을 참조하는 모든 자식 데이터들을 명시적으로 삭제
+        commentRepository.deleteAll(boardEntity.getCommentEntityList());
+        boardLikeRepository.deleteAll(boardEntity.getBoardLikeEntityList()); // 좋아요 삭제
+        scrapRepository.deleteAll(boardEntity.getScrapEntityList());         // 스크랩 삭제
+
+        // 3. 모든 자식 데이터가 정리된 후, 게시글 최종 삭제
         boardRepository.delete(boardEntity);
     }
+
+    private void deleteS3FileIfAttached(BoardEntity boardEntity) {
+        if (boardEntity.getFileAttached() == 1 && boardEntity.getBoardFileEntityList() != null && !boardEntity.getBoardFileEntityList().isEmpty()) {
+            s3UploaderService.ifPresent(uploader -> {
+                String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
+                uploader.delete(storedFileName);
+            });
+        }
+    }
 }
+

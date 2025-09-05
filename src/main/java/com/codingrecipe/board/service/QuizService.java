@@ -1,4 +1,3 @@
-// 퀴즈 생성, 풀이, 채점, 랭킹 등 퀴즈 관련 모든 비즈니스 로직을 처리하는 서비스
 package com.codingrecipe.board.service;
 
 import com.codingrecipe.board.domain.*;
@@ -204,17 +203,18 @@ public class QuizService {
         return new SubmitAnswerResponse(isCorrect, quiz.getExplanation());
     }
 
-    public QuizDetailResponse createQuiz(QuizCreateRequest request) {
+    public QuizAdminDetailResponse createQuiz(QuizCreateRequest request) {
         Quiz newQuiz = new Quiz();
         updateQuizFromRequest(newQuiz, request);
         Quiz savedQuiz = quizRepository.save(newQuiz);
-        return convertToDetailDto(savedQuiz);
+        return new QuizAdminDetailResponse(savedQuiz);
     }
 
-    public QuizDetailResponse updateQuiz(Long quizId, QuizCreateRequest request) {
+    public QuizAdminDetailResponse updateQuiz(Long quizId, QuizCreateRequest request) {
         Quiz existingQuiz = findQuizById(quizId);
         updateQuizFromRequest(existingQuiz, request);
-        return convertToDetailDto(existingQuiz);
+        Quiz savedQuiz = quizRepository.save(existingQuiz);
+        return new QuizAdminDetailResponse(savedQuiz);
     }
 
     public void deleteQuiz(Long quizId) {
@@ -232,9 +232,9 @@ public class QuizService {
     }
 
     @Transactional(readOnly = true)
-    public QuizDetailResponse findQuizDetailById(Long quizId) {
+    public QuizAdminDetailResponse findQuizDetailById(Long quizId) {
         Quiz quiz = findQuizById(quizId);
-        return convertToDetailDto(quiz);
+        return new QuizAdminDetailResponse(quiz);
     }
 
     @Transactional(readOnly = true)
@@ -293,38 +293,30 @@ public class QuizService {
         quiz.getChoices().clear();
 
         if (request.getQuizType() == QuizType.MULTIPLE_CHOICE || request.getQuizType() == QuizType.OX) {
-            if (request.getCorrectChoiceIndex() == null) {
-                throw new CustomException(ErrorCode.INVALID_ARGUMENT);
+            if (request.getCorrectChoiceIndex() == null || request.getChoices() == null) {
+                throw new CustomException(ErrorCode.INVALID_ARGUMENT, "객관식/OX 퀴즈는 선택지와 정답 인덱스가 필수입니다.");
             }
-            List<QuizChoice> choices = mapChoicesFromDto(request.getChoices(), quiz, request.getCorrectChoiceIndex());
-            quiz.getChoices().addAll(choices);
-        } else {
+            List<QuizChoice> newChoices = new ArrayList<>();
+            for (int i = 0; i < request.getChoices().size(); i++) {
+                QuizCreateRequest.ChoiceRequest choiceDto = request.getChoices().get(i);
+                QuizChoice choice = new QuizChoice();
+                choice.setContent(choiceDto.getContent());
+                choice.setAnswer(i == request.getCorrectChoiceIndex());
+                choice.setQuiz(quiz);
+                newChoices.add(choice);
+            }
+            quiz.getChoices().addAll(newChoices);
+
+        } else if (request.getQuizType() == QuizType.SHORT_ANSWER) {
+            if (request.getShortAnswer() == null || request.getShortAnswer().isBlank()) {
+                throw new CustomException(ErrorCode.INVALID_ARGUMENT, "주관식 퀴즈는 정답이 필수입니다.");
+            }
             QuizChoice answerChoice = new QuizChoice();
             answerChoice.setContent(request.getShortAnswer());
             answerChoice.setAnswer(true);
             answerChoice.setQuiz(quiz);
             quiz.getChoices().add(answerChoice);
         }
-    }
-
-    private List<QuizChoice> mapChoicesFromDto(List<QuizCreateRequest.ChoiceRequest> choiceDtos, Quiz quiz, int correctChoiceIndex) {
-        if (choiceDtos == null) {
-            return new ArrayList<>();
-        }
-        List<QuizChoice> choices = choiceDtos.stream()
-                .filter(choiceDto -> choiceDto.getContent() != null && !choiceDto.getContent().isBlank())
-                .map(choiceDto -> {
-                    QuizChoice choice = new QuizChoice();
-                    choice.setContent(choiceDto.getContent());
-                    choice.setAnswer(false);
-                    choice.setQuiz(quiz);
-                    return choice;
-                }).collect(Collectors.toList());
-
-        if (correctChoiceIndex >= 0 && correctChoiceIndex < choices.size()) {
-            choices.get(correctChoiceIndex).setAnswer(true);
-        }
-        return choices;
     }
 
     private Quiz findQuizById(Long quizId) {
@@ -364,3 +356,4 @@ public class QuizService {
         }
     }
 }
+

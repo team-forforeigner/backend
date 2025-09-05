@@ -1,11 +1,13 @@
 package com.codingrecipe.board.controller;
 
+import com.codingrecipe.board.dto.ApiResponseDto;
 import com.codingrecipe.board.dto.ChoiceClickResponseDTO;
 import com.codingrecipe.board.dto.EpisodeHistoryDTO;
 import com.codingrecipe.board.dto.EpisodeResponseDTO;
 import com.codingrecipe.board.dto.SeriesListResponseDTO;
 import com.codingrecipe.board.dto.UserLevelDTO;
 import com.codingrecipe.board.service.SurvivalService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,67 +18,65 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/survival")
+@RequiredArgsConstructor // 생성자 주입을 위해 @RequiredArgsConstructor 사용
 public class SurvivalController {
 
     private final SurvivalService survivalService;
 
-    public SurvivalController(SurvivalService survivalService) {
-        this.survivalService = survivalService;
-    }
+    // 모든 응답을 ApiResponseDto로 감싸도록 변경
 
     @PostMapping("/choose")
-    public ResponseEntity<ChoiceClickResponseDTO> choose(
+    public ResponseEntity<ApiResponseDto<ChoiceClickResponseDTO>> choose(
             @AuthenticationPrincipal String email,
             @RequestParam Long choiceId
     ) {
         ChoiceClickResponseDTO response = survivalService.choose(email, choiceId);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(ApiResponseDto.success(response));
     }
 
     @GetMapping("/categories/{categoryId}/series")
-    public ResponseEntity<SeriesListResponseDTO> getSeriesList(@PathVariable Long categoryId) {
+    public ResponseEntity<ApiResponseDto<SeriesListResponseDTO>> getSeriesList(@PathVariable Long categoryId) {
         SeriesListResponseDTO response = survivalService.getSeriesList(categoryId);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(ApiResponseDto.success(response));
     }
 
     @PostMapping("/start")
-    public ResponseEntity<Long> startSeries(@AuthenticationPrincipal String email, @RequestParam Long seriesId) {
+    public ResponseEntity<ApiResponseDto<Long>> startSeries(@AuthenticationPrincipal String email, @RequestParam Long seriesId) {
         Long firstEpisodeId = survivalService.startSeries(email, seriesId);
-        return new ResponseEntity<>(firstEpisodeId, HttpStatus.OK);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseDto.success(firstEpisodeId));
     }
 
     @GetMapping("/episodes/{episodeId}")
-    public ResponseEntity<EpisodeResponseDTO> getEpisode(@PathVariable Long episodeId) {
+    public ResponseEntity<ApiResponseDto<EpisodeResponseDTO>> getEpisode(@PathVariable Long episodeId) {
         EpisodeResponseDTO response = survivalService.getEpisode(episodeId);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(ApiResponseDto.success(response));
     }
 
     @GetMapping("/history")
-    public ResponseEntity<List<EpisodeHistoryDTO>> getHistory(@RequestParam Long seriesId, @AuthenticationPrincipal String email) {
+    public ResponseEntity<ApiResponseDto<List<EpisodeHistoryDTO>>> getHistory(@RequestParam Long seriesId, @AuthenticationPrincipal String email) {
         List<EpisodeHistoryDTO> history = survivalService.getHistory(seriesId, email);
-        return new ResponseEntity<>(history, HttpStatus.OK);
+        return ResponseEntity.ok(ApiResponseDto.success(history));
     }
 
     @PostMapping("/complete")
-    public ResponseEntity<String> completeSeries(@RequestParam Long seriesId, @AuthenticationPrincipal String email) {
+    public ResponseEntity<ApiResponseDto<String>> completeSeries(@RequestParam Long seriesId, @AuthenticationPrincipal String email) {
         boolean success = survivalService.completeSeries(email, seriesId);
-        if (success) {
-            return new ResponseEntity<>("시리즈가 완료되었습니다.", HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>("이미 완료한 시리즈입니다.", HttpStatus.OK);
-        }
+        String message = success ? "시리즈가 완료되었습니다." : "이미 완료한 시리즈입니다.";
+        return ResponseEntity.ok(ApiResponseDto.success(message));
     }
 
     @PostMapping("/reset")
-    public ResponseEntity<String> resetSeries(@RequestParam Long seriesId, @AuthenticationPrincipal String email) {
+    public ResponseEntity<ApiResponseDto<Void>> resetSeries(@RequestParam Long seriesId, @AuthenticationPrincipal String email) {
         survivalService.resetSeries(email, seriesId);
-        return new ResponseEntity<>("시리즈 상태가 초기화되었습니다.", HttpStatus.OK);
+        return ResponseEntity.ok(ApiResponseDto.success("시리즈 상태가 초기화되었습니다."));
     }
 
     @GetMapping("/level")
-    public ResponseEntity<UserLevelDTO> getUserLevel(@AuthenticationPrincipal String email){
+    public ResponseEntity<ApiResponseDto<UserLevelDTO>> getUserLevel(@AuthenticationPrincipal String email){
         Optional<UserLevelDTO> userLevelOptional = survivalService.getUserLevel(email);
-        return userLevelOptional.map(userLevelDTO-> new ResponseEntity<>(userLevelDTO, HttpStatus.OK))
-                .orElseGet(()-> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        return userLevelOptional
+                .map(userLevelDTO -> ResponseEntity.ok(ApiResponseDto.success(userLevelDTO)))
+                .orElseGet(()-> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponseDto.error(com.codingrecipe.board.exception.ErrorCode.NOT_FOUND)));
     }
 }

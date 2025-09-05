@@ -1,6 +1,6 @@
-// JWT 생성, 검증, 파싱 등 관련 유틸리티 클래스
 package com.codingrecipe.board.security;
 
+import com.codingrecipe.board.domain.Member;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -9,13 +9,18 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -36,7 +41,7 @@ public class JwtUtil {
     }
 
     /**
-     * 토큰에서 사용자 이메일(subject)을 추출
+     * 토큰에서 사용자 이메일을 추출
      */
     public String getEmail(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -51,15 +56,6 @@ public class JwtUtil {
     }
 
     /**
-     * 토큰의 남은 유효 시간을 밀리초 단위로 반환
-     */
-    public long getExpiration(String token) {
-        Date expiration = extractClaim(token, Claims::getExpiration);
-        long now = new Date().getTime();
-        return expiration.getTime() - now;
-    }
-
-    /**
      * HttpServletRequest의 헤더에서 "Bearer " 토큰을 추출
      */
     public String resolveToken(HttpServletRequest request) {
@@ -71,20 +67,44 @@ public class JwtUtil {
     }
 
     /**
-     * 주어진 이메일로 새로운 JWT 토큰을 생성
+     * Member 엔티티의 정보를 받아 JWT 토큰을 생성
+     * 토큰에는 id, nickname, role 정보가 추가로 포함
      */
-    public String generateToken(String email, String role) {
+    public String generateToken(Member member) {
+        Claims claims = Jwts.claims();
+        claims.put("id", member.getId());
+        claims.put("nickname", member.getNickname());
+        claims.put("role", member.getRoleKey()); // "ROLE_USER" 또는 "ROLE_ADMIN"
+
         return Jwts.builder()
-                .setSubject(email) // 토큰의 주체로 이메일 설정
-                .claim("role", role) // 역할 정보 추가. DB에서 역할 정보 조회 후 설정
-                .setIssuedAt(new Date(System.currentTimeMillis())) // 발급 시간 설정
-                .setExpiration(new Date(System.currentTimeMillis() + expirationMs)) // 만료 시간 설정
-                .signWith(secretKey, SignatureAlgorithm.HS256) // 비밀키로 서명
+                .setClaims(claims)
+                .setSubject(member.getEmail())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact(); // 토큰 생성
     }
 
     /**
-     * 토큰을 파싱하여 모든 클레임(정보)을 추출
+     * 토큰에서 UserPrincipal 객체를 파싱하여 반환합
+     */
+    public UserPrincipal parseToken(String token) {
+        Claims claims = extractAllClaims(token);
+
+        Long id = claims.get("id", Long.class);
+        String email = claims.getSubject();
+        String nickname = claims.get("nickname", String.class);
+
+        String roleStr = claims.get("role", String.class);
+        Collection<? extends GrantedAuthority> authorities = Arrays.stream(roleStr.split(","))
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+
+        return new UserPrincipal(id, email, nickname, authorities);
+    }
+
+    /**
+     * 토큰을 파싱하여 모든 정보를 추출
      */
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()

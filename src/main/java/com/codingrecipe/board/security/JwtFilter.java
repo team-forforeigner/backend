@@ -1,9 +1,9 @@
 package com.codingrecipe.board.security;
 
-import com.codingrecipe.board.domain.Member;
-import com.codingrecipe.board.domain.MemberStatus;
+import com.codingrecipe.board.dto.ApiResponseDto;
+import com.codingrecipe.board.exception.ErrorCode;
 import com.codingrecipe.board.repository.LoggedOutTokenRepository;
-import com.codingrecipe.board.repository.MemberRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -12,16 +12,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Optional;
 
 @Slf4j
 @Component
@@ -29,8 +27,8 @@ import java.util.Optional;
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private final MemberRepository memberRepository;
     private final LoggedOutTokenRepository loggedOutTokenRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -52,36 +50,19 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (loggedOutTokenRepository.existsByToken(token)) {
             log.warn("이미 로그아웃 처리된 토큰입니다.");
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token is logged out");
+            setErrorResponse(response, ErrorCode.UNAUTHORIZED_USER, "Logged out token");
             return;
         }
 
         try {
-            String email = jwtUtil.getEmail(token);
+            if (!jwtUtil.isTokenExpired(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
+                // DB 조회 없이 토큰에서 직접 사용자 정보를 파싱합니다.
+                UserPrincipal userPrincipal = jwtUtil.parseToken(token);
 
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                if (jwtUtil.isTokenExpired(token)) {
-                    log.warn("토큰이 만료되었습니다.");
-                    filterChain.doFilter(request, response);
-                    return;
-                }
-
-                Optional<Member> memberOpt = memberRepository.findByEmail(email);
-
-                if (memberOpt.isPresent()) {
-                    Member member = memberOpt.get();
-
-                    if (member.getStatus() == MemberStatus.SUSPENDED) {
-                        log.warn("정지된 계정의 토큰입니다: {}", email);
-                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Suspended account");
-                        return;
-                    }
-
-                    UsernamePasswordAuthenticationToken authenticationToken =
-                            new UsernamePasswordAuthenticationToken(member.getEmail(), null, Collections.singletonList(new SimpleGrantedAuthority(member.getRoleKey())));
-                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-                }
+                UsernamePasswordAuthenticationToken authenticationToken =
+                        new UsernamePasswordAuthenticationToken(userPrincipal, null, userPrincipal.getAuthorities());
+                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
             }
         } catch (ExpiredJwtException e) {
             log.error("토큰이 만료되었습니다: {}", e.getMessage());
@@ -90,5 +71,12 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void setErrorResponse(HttpServletResponse response, ErrorCode errorCode, String message) throws IOException {
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
+        response.setStatus(errorCode.getStatus().value());
+        response.getWriter().write(objectMapper.writeValueAsString(ApiResponseDto.error(errorCode, message)));
     }
 }
