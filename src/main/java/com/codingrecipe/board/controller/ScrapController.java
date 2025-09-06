@@ -2,6 +2,7 @@ package com.codingrecipe.board.controller;
 
 import com.codingrecipe.board.dto.ApiResponseDto;
 import com.codingrecipe.board.dto.BoardDTO;
+import com.codingrecipe.board.security.UserPrincipal;
 import com.codingrecipe.board.service.ScrapService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,20 +20,23 @@ public class ScrapController {
 
     @PostMapping("/boards/{boardId}/scrap")
     public ResponseEntity<ApiResponseDto<Void>> addScrap(@PathVariable Long boardId,
-                                                         @AuthenticationPrincipal String email) {
+                                                         @AuthenticationPrincipal UserPrincipal user) {
+        String email = user.getEmail();
         scrapService.addScrap(email, boardId);
         return ResponseEntity.ok(ApiResponseDto.success("게시글을 스크랩했습니다."));
     }
 
     @DeleteMapping("/boards/{boardId}/scrap")
     public ResponseEntity<ApiResponseDto<Void>> removeScrap(@PathVariable Long boardId,
-                                                            @AuthenticationPrincipal String email) {
+                                                            @AuthenticationPrincipal UserPrincipal user) {
+        String email = user.getEmail();
         scrapService.removeScrap(email, boardId);
         return ResponseEntity.ok(ApiResponseDto.success("스크랩을 취소했습니다."));
     }
 
     @GetMapping("/scraps/my")
-    public ResponseEntity<ApiResponseDto<List<BoardDTO>>> getMyScraps(@AuthenticationPrincipal String email) {
+    public ResponseEntity<ApiResponseDto<List<BoardDTO>>> getMyScraps(@AuthenticationPrincipal UserPrincipal user) {
+        String email = user.getEmail();
         List<BoardDTO> myScraps = scrapService.getMyScraps(email);
         return ResponseEntity.ok(ApiResponseDto.success(myScraps));
     }
