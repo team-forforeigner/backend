@@ -125,7 +125,7 @@ public class BoardService {
         s3UploaderService.ifPresent(uploader -> {
             if (boardEntity.getFileAttached() == 1 && !boardEntity.getBoardFileEntityList().isEmpty()) {
                 String storedFileName = boardEntity.getBoardFileEntityList().get(0).getStoredFileName();
-                String fileUrl = uploader.generatePresignedUrl(storedFileName);
+                String fileUrl = storedFileName;
                 boardDTO.setFileUrl(fileUrl);
             }
         });
