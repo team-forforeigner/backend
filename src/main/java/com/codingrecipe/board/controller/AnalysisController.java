@@ -61,39 +61,51 @@ public class AnalysisController {
         String s3Url = s3UploaderService.map(uploader -> uploader.generatePresignedUrl(fileKey))
                 .orElse("s3-disabled-in-local");
 
-
         // --- 2. 바이트 배열 추출 (S3에서 읽기) ---
         byte[] imageBytes = s3UploaderService
                 .map(uploader -> uploader.downloadAsBytes(fileKey))
                 .orElse(imageFile.getBytes()); // local이면 그냥 업로드된 파일 사용
 
+        System.out.println("이미지 바이트 배열 크기: " + imageBytes.length + " bytes");
+        System.out.println("원본 파일명: " + imageFile.getOriginalFilename());
+        System.out.println("Content Type: " + imageFile.getContentType());
+        System.out.println("전송할 type 파라미터: " + type);
+
         WebClient webClient = webClientBuilder.baseUrl("https://ai.navoodiai.site").build();
 
-        // --- 3. AI 서버로 보낼 Multipart 요청 본문 생성 ---
+        // --- 3. AI 서버로 보낼 Multipart 요청 본문 생성 (수정됨) ---
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
+
+        // 파일 파트 추가 - Content-Type을 명시적으로 설정
         builder.part("file", new ByteArrayResource(imageBytes) {
             @Override
             public String getFilename() {
                 return imageFile.getOriginalFilename();
             }
-        });
+        }).contentType(MediaType.parseMediaType(imageFile.getContentType()));
 
-        // ★★★★★ 1. 변경된 부분 ★★★★★
-        // 'type' 파라미터를 요청 본문(form-data)에 추가합니다.
+        // type 파라미터 추가
         builder.part("type", type);
 
+        System.out.println("MultipartBodyBuilder 구성 완료");
 
         // --- 4. YOLO 분석 요청 ---
         return webClient.post()
-                // ★★★★★ 2. 변경된 부분 ★★★★★
-                // URI를 만들 때 더 이상 URL에 쿼리 파라미터(?type=...)를 추가하지 않습니다.
                 .uri(uriBuilder -> uriBuilder.path("/api/analyze").build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .header("CF-Access-Client-Id", accessClientId)
                 .header("CF-Access-Client-Secret", accessClientSecret)
                 .body(BodyInserters.fromMultipartData(builder.build()))
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                        clientResponse -> {
+                            System.out.println("AI 서버 응답 상태 코드: " + clientResponse.statusCode());
+                            return clientResponse.bodyToMono(String.class)
+                                    .doOnNext(body -> System.out.println("AI 서버 에러 응답 본문: " + body))
+                                    .then(Mono.error(new RuntimeException("AI 서버 요청 실패: " + clientResponse.statusCode())));
+                        })
                 .bodyToMono(AnalysisResponse.class)
+                .doOnNext(response -> System.out.println("AI 서버 응답: " + response))
                 .flatMap(aiResponse -> {
                     List<String> detectedObjects = aiResponse.detectedObjects();
 
