@@ -76,13 +76,17 @@ public class AnalysisController {
         // --- 3. AI 서버로 보낼 Multipart 요청 본문 생성 (수정됨) ---
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
 
-        // 파일 파트 추가 - Content-Type을 명시적으로 설정
+        // 파일 파트 추가 - filename과 headers를 명시적으로 설정
         builder.part("file", new ByteArrayResource(imageBytes) {
-            @Override
-            public String getFilename() {
-                return imageFile.getOriginalFilename();
-            }
-        }).contentType(MediaType.parseMediaType(imageFile.getContentType()));
+                    @Override
+                    public String getFilename() {
+                        return imageFile.getOriginalFilename();
+                    }
+                })
+                .filename(imageFile.getOriginalFilename()) // 중요: filename을 명시적으로 설정
+                .contentType(MediaType.parseMediaType(
+                        imageFile.getContentType() != null ? imageFile.getContentType() : "image/jpeg"
+                ));
 
         // type 파라미터 추가
         builder.part("type", type);
