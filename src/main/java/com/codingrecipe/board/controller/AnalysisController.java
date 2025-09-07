@@ -9,12 +9,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.http.*;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -64,52 +66,60 @@ public class AnalysisController {
         // --- 2. 바이트 배열 추출 (S3에서 읽기) ---
         byte[] imageBytes = s3UploaderService
                 .map(uploader -> uploader.downloadAsBytes(fileKey))
-                .orElse(imageFile.getBytes()); // local이면 그냥 업로드된 파일 사용
+                .orElse(imageFile.getBytes());
 
         System.out.println("이미지 바이트 배열 크기: " + imageBytes.length + " bytes");
         System.out.println("원본 파일명: " + imageFile.getOriginalFilename());
         System.out.println("Content Type: " + imageFile.getContentType());
         System.out.println("전송할 type 파라미터: " + type);
 
-        WebClient webClient = webClientBuilder.baseUrl("https://ai.navoodiai.site").build();
+        // --- 3. RestTemplate을 사용한 multipart 요청 ---
+        return Mono.fromCallable(() -> {
+                    try {
+                        RestTemplate restTemplate = new RestTemplate();
 
-        // --- 3. AI 서버로 보낼 Multipart 요청 본문 생성 (수정됨) ---
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+                        // 헤더 설정
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+                        headers.set("CF-Access-Client-Id", accessClientId);
+                        headers.set("CF-Access-Client-Secret", accessClientSecret);
 
-        // 파일 파트 추가 - filename과 headers를 명시적으로 설정
-        builder.part("file", new ByteArrayResource(imageBytes) {
-                    @Override
-                    public String getFilename() {
-                        return imageFile.getOriginalFilename();
+                        // 파일 리소스 생성 (filename을 올바르게 설정)
+                        ByteArrayResource fileResource = new ByteArrayResource(imageBytes) {
+                            @Override
+                            public String getFilename() {
+                                return imageFile.getOriginalFilename();
+                            }
+                        };
+
+                        // MultiValueMap으로 form 데이터 구성
+                        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                        body.add("file", fileResource);
+                        body.add("type", type);
+
+                        // HttpEntity 생성
+                        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+                        System.out.println("RestTemplate 요청 구성 완료");
+
+                        // POST 요청 실행
+                        ResponseEntity<AnalysisResponse> response = restTemplate.postForEntity(
+                                "https://ai.navoodiai.site/api/analyze",
+                                requestEntity,
+                                AnalysisResponse.class
+                        );
+
+                        System.out.println("AI 서버 응답 상태: " + response.getStatusCode());
+                        System.out.println("AI 서버 응답: " + response.getBody());
+
+                        return response.getBody();
+
+                    } catch (Exception e) {
+                        System.out.println("RestTemplate 요청 중 오류: " + e.getMessage());
+                        throw new RuntimeException("AI 서버 통신 중 오류", e);
                     }
                 })
-                .filename(imageFile.getOriginalFilename()) // 중요: filename을 명시적으로 설정
-                .contentType(MediaType.parseMediaType(
-                        imageFile.getContentType() != null ? imageFile.getContentType() : "image/jpeg"
-                ));
-
-        // type 파라미터 추가
-        builder.part("type", type);
-
-        System.out.println("MultipartBodyBuilder 구성 완료");
-
-        // --- 4. YOLO 분석 요청 ---
-        return webClient.post()
-                .uri(uriBuilder -> uriBuilder.path("/api/analyze").build())
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .header("CF-Access-Client-Id", accessClientId)
-                .header("CF-Access-Client-Secret", accessClientSecret)
-                .body(BodyInserters.fromMultipartData(builder.build()))
-                .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
-                        clientResponse -> {
-                            System.out.println("AI 서버 응답 상태 코드: " + clientResponse.statusCode());
-                            return clientResponse.bodyToMono(String.class)
-                                    .doOnNext(body -> System.out.println("AI 서버 에러 응답 본문: " + body))
-                                    .then(Mono.error(new RuntimeException("AI 서버 요청 실패: " + clientResponse.statusCode())));
-                        })
-                .bodyToMono(AnalysisResponse.class)
-                .doOnNext(response -> System.out.println("AI 서버 응답: " + response))
+                .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
                 .flatMap(aiResponse -> {
                     List<String> detectedObjects = aiResponse.detectedObjects();
 
@@ -120,10 +130,12 @@ public class AnalysisController {
 
                     String targetObject = detectedObjects.get(0);
 
-                    // --- 5. 설명 요청 ---
+                    // --- 4. 설명 요청 (WebClient 유지) ---
+                    WebClient webClient = webClientBuilder.baseUrl("https://ai.navoodiai.site").build();
+
                     return webClient.post()
                             .uri(uriBuilder -> uriBuilder.path("/api/describe")
-                                    .queryParam("type", type) // 설명 요청에는 type을 쿼리 파라미터로 전달
+                                    .queryParam("type", type)
                                     .build())
                             .contentType(MediaType.APPLICATION_JSON)
                             .header("CF-Access-Client-Id", accessClientId)
