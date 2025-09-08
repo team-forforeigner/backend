@@ -3,19 +3,21 @@ package com.codingrecipe.board.service;
 import com.codingrecipe.board.domain.Member;
 import com.codingrecipe.board.domain.MemberStatus;
 import com.codingrecipe.board.domain.Role;
-import com.codingrecipe.board.dto.EmailRequestDto;
-import com.codingrecipe.board.dto.PasswordChangeRequest;
-import com.codingrecipe.board.dto.SignUpRequestDto;
-import com.codingrecipe.board.dto.UserInfoDto;
+import com.codingrecipe.board.dto.*;
 import com.codingrecipe.board.exception.CustomException;
 import com.codingrecipe.board.exception.ErrorCode;
 import com.codingrecipe.board.repository.MemberRepository;
 import com.codingrecipe.board.security.JwtUtil;
+import com.codingrecipe.board.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +31,14 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final JwtUtil jwtUtil;
+    private final TitleAndBadgeManager titleAndBadgeManager;
+    private final Optional<S3UploaderService> s3UploaderService;
+
+    @Value("${cloud.aws.s3.folder.profile}")
+    private String profileFolder;
+
+    @Value("${cloud.aws.s3.folder.badge}")
+    private String badgeFolder;
 
     /**
      * 회원가입 처리 로직
@@ -59,7 +69,7 @@ public class MemberService {
     private void updateUnverifiedMember(Member member, SignUpRequestDto dto) {
         member.setPassword(passwordEncoder.encode(dto.getPassword()));
         member.setNationality(dto.getNationality());
-        member.setNickname(dto.getEmail());
+        member.setNickname(dto.getEmail()); // 초기 닉네임은 이메일로 설정
     }
 
     /**
@@ -80,7 +90,7 @@ public class MemberService {
      * 이메일 인증 토큰을 검증하여 회원 상태를 '인증 완료'로 변경
      */
     public void verifyEmailByToken(String token) {
-        String email = jwtUtil.getEmail(token);
+        String email = jwtUtil.getEmailFromVerificationToken(token);
         Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         member.setEmailVerified(true);
@@ -107,6 +117,8 @@ public class MemberService {
         }
 
         member.setLastLoginAt(LocalDateTime.now());
+        memberRepository.save(member);
+
         return jwtUtil.generateToken(member);
     }
 
@@ -124,65 +136,113 @@ public class MemberService {
     /**
      * 현재 로그인된 사용자의 비밀번호를 변경
      */
-    public void changePassword(String email, PasswordChangeRequest dto) {
-        Member member = memberRepository.findByEmail(email)
+    public void changePassword(UserPrincipal user, PasswordChangeRequest dto) {
+        Member member = memberRepository.findByEmail(user.getEmail())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         if (!passwordEncoder.matches(dto.getCurrentPassword(), member.getPassword())) {
-            throw new CustomException(ErrorCode.INVALID_PASSWORD);
+            throw new CustomException(ErrorCode.INVALID_PASSWORD, "현재 비밀번호가 일치하지 않습니다.");
         }
         if (!dto.getNewPassword().equals(dto.getNewPasswordCheck())) {
-            throw new CustomException(ErrorCode.INVALID_PASSWORD);
+            throw new CustomException(ErrorCode.INVALID_PASSWORD, "새 비밀번호와 확인 비밀번호가 일치하지 않습니다.");
         }
         member.setPassword(passwordEncoder.encode(dto.getNewPassword()));
     }
 
-    /**
-     * 이메일로 사용자 정보를 조회하여 DTO로 반환
-     */
+    // --- 프로필 조회 로직 ---
     @Transactional(readOnly = true)
-    public UserInfoDto getMemberInfoByEmail(String email) {
-        Member member = memberRepository.findByEmail(email)
+    public ProfileResponseDto getUserProfile(Long memberId) {
+        Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        return new UserInfoDto(member);
+
+        List<String> availableTitles = titleAndBadgeManager.getAvailableTitles(member.getLevel());
+        List<AvailableBadgeDto> availableBadges = titleAndBadgeManager.getAvailableBadges(member.getLevel());
+
+        return new ProfileResponseDto(member, availableTitles, availableBadges);
     }
 
-    /**
-     * 이메일로 사용자 엔티티를 조회 (내부 로직용)
-     */
-    @Transactional(readOnly = true)
-    public Member findMemberByEmail(String email) {
-        return memberRepository.findByEmail(email)
+    // --- 프로필 수정 로직 ---
+    public void updateProfile(Long memberId, ProfileUpdateRequestDto requestDto, MultipartFile profileImage, MultipartFile backgroundImage) throws IOException {
+        Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 1. 프로필 이미지 업데이트
+        if (profileImage != null && !profileImage.isEmpty()) {
+            String existingProfileImageKey = member.getProfileImageUrl();
+            String newProfileImageKey = s3UploaderService.map(uploader -> {
+                try {
+                    // 기존 이미지가 있으면 S3에서 삭제
+                    if (StringUtils.hasText(existingProfileImageKey)) {
+                        uploader.deleteImage(existingProfileImageKey);
+                    }
+                    // 새 이미지 업로드 후 파일 키 반환
+                    return uploader.uploadImage(profileImage, "profiles");
+                } catch (IOException e) {
+                    throw new CustomException(ErrorCode.S3_FILE_UPLOAD_FAILED);
+                }
+            }).orElse(null);
+            member.setProfileImageUrl(newProfileImageKey);
+        }
+
+        // 2. 배경 이미지 업데이트
+        if (backgroundImage != null && !backgroundImage.isEmpty()) {
+            String existingBgImageKey = member.getBackgroundImageUrl();
+            String newBgImageKey = s3UploaderService.map(uploader -> {
+                try {
+                    if (StringUtils.hasText(existingBgImageKey)) {
+                        uploader.deleteImage(existingBgImageKey);
+                    }
+                    return uploader.uploadImage(backgroundImage, "backgrounds");
+                } catch (IOException e) {
+                    throw new CustomException(ErrorCode.S3_FILE_UPLOAD_FAILED);
+                }
+            }).orElse(null);
+            member.setBackgroundImageUrl(newBgImageKey);
+        }
+
+        // 3. 텍스트 정보 업데이트 (닉네임, 칭호, 배지)
+        if (requestDto != null) {
+            // 닉네임 업데이트
+            if (StringUtils.hasText(requestDto.getNickname())) {
+                member.setNickname(requestDto.getNickname());
+            }
+
+            // 칭호 업데이트
+            if (StringUtils.hasText(requestDto.getSelectedTitle())) {
+                List<String> availableTitles = titleAndBadgeManager.getAvailableTitles(member.getLevel());
+                if (availableTitles.contains(requestDto.getSelectedTitle())) {
+                    member.setTitle(requestDto.getSelectedTitle());
+                } else {
+                    throw new CustomException(ErrorCode.FORBIDDEN_ACCESS, "아직 사용할 수 없는 칭호입니다.");
+                }
+            }
+
+            // 캐릭터 업데이트
+            if (StringUtils.hasText(requestDto.getSelectedBadge())) {
+                List<AvailableBadgeDto> availableBadges = titleAndBadgeManager.getAvailableBadges(member.getLevel());
+                boolean isSelectable = availableBadges.stream()
+                        .anyMatch(badge -> badge.getImageUrl().equals(requestDto.getSelectedBadge()));
+                if (isSelectable) {
+                    member.setBadge(requestDto.getSelectedBadge());
+                } else {
+                    throw new CustomException(ErrorCode.FORBIDDEN_ACCESS, "아직 사용할 수 없는 캐릭터입니다.");
+                }
+            }
+        }
     }
 
-    /**
-     * 사용자의 닉네임을 변경
-     */
-    public void updateNickname(String email, String newNickname) {
-        Member member = findMemberByEmail(email);
-        member.setNickname(newNickname);
-    }
 
-    /**
-     * 모든 회원 목록을 조회 (관리자용)
-     */
+    // --- 관리자용 메소드들 ---
     @Transactional(readOnly = true)
     public List<Member> findMembers() {
         return memberRepository.findAll();
     }
 
-    /**
-     * ID로 특정 회원 정보를 조회 (관리자용)
-     */
     @Transactional(readOnly = true)
     public Optional<Member> findOne(Long memberId) {
         return memberRepository.findById(memberId);
     }
 
-    /**
-     * 관리자가 특정 회원을 ID로 삭제합니다.
-     */
     public void deleteMemberByAdmin(Long memberId) {
         if (!memberRepository.existsById(memberId)) {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
@@ -190,20 +250,15 @@ public class MemberService {
         memberRepository.deleteById(memberId);
     }
 
-    /**
-     * 관리자가 이메일 시작 문자로 회원을 검색합니다.
-     */
     @Transactional(readOnly = true)
     public List<Member> searchMembersByEmail(String emailKeyword) {
         return memberRepository.findByEmailStartingWith(emailKeyword);
     }
 
-    /**
-     * 관리자가 회원의 상태(활성/정지)를 변경합니다.
-     */
     public void updateMemberStatus(Long memberId, MemberStatus status) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         member.setStatus(status);
     }
 }
+

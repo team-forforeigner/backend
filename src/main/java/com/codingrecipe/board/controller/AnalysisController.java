@@ -31,6 +31,10 @@ public class AnalysisController {
     private final WebClient.Builder webClientBuilder;
     private final Optional<S3UploaderService> s3UploaderService;
 
+    // S3 버킷 내 챗봇 이미지가 저장될 폴더 경로
+    @Value("${cloud.aws.s3.folder.analysis}")
+    private String analysisFolder;
+
     @Value("${ai-server.access-client-id}")
     private String accessClientId;
 
@@ -46,7 +50,7 @@ public class AnalysisController {
         String fileKey = s3UploaderService
                 .map(uploader -> {
                     try {
-                        return uploader.uploadImage(imageFile, "chatbot");
+                        return uploader.uploadImage(imageFile, analysisFolder);
                     } catch (IOException e) {
                         throw new RuntimeException("S3 업로드 실패", e);
                     }

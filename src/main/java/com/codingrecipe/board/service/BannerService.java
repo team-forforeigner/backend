@@ -8,6 +8,7 @@ import com.codingrecipe.board.exception.ErrorCode;
 import com.codingrecipe.board.repository.BannerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +27,10 @@ public class BannerService {
     private final BannerRepository bannerRepository;
     private final Optional<S3UploaderService> s3UploaderService;
 
+    // S3 버킷 내 배너 이미지가 저장될 폴더 경로
+    @Value("${cloud.aws.s3.folder.banner}")
+    private String bannerFolder;
+
     @Transactional(readOnly = true)
     public List<BannerDTO> findAllBanners() {
         return bannerRepository.findAll().stream()
@@ -39,7 +44,7 @@ public class BannerService {
         s3UploaderService.ifPresentOrElse(
                 uploader -> {
                     try {
-                        String imageUrl = uploader.uploadImage(imageFile, "banner");
+                        String imageUrl = uploader.uploadImage(imageFile, bannerFolder);
                         bannerEntity.setImageUrl(imageUrl);
                     } catch (IOException e) {
                         log.error("S3 파일 업로드 중 오류 발생", e);
@@ -66,7 +71,7 @@ public class BannerService {
         if (imageFile != null && !imageFile.isEmpty()) {
             s3UploaderService.ifPresent(uploader -> {
                 try {
-                    String newImageUrl = uploader.updateImage(bannerEntity.getImageUrl(), imageFile, "banners");
+                    String newImageUrl = uploader.updateImage(bannerEntity.getImageUrl(), imageFile, bannerFolder);
                     bannerEntity.setImageUrl(newImageUrl);
                 } catch (IOException e) {
                     throw new CustomException(ErrorCode.S3_FILE_UPLOAD_FAILED);

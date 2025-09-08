@@ -8,6 +8,7 @@ import com.codingrecipe.board.exception.ErrorCode;
 import com.codingrecipe.board.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
@@ -35,6 +36,10 @@ public class BoardService {
     private final CommentRepository commentRepository;
     private final ScrapRepository scrapRepository;
     private final Optional<S3UploaderService> s3UploaderService;
+
+    // S3 버킷 내 게시글 이미지가 저장될 폴더 경로
+    @Value("${cloud.aws.s3.folder.post-image}")
+    private String postImageFolder;
 
     @Transactional
     public Long save(BoardDTO boardDTO, String email) throws IOException {
@@ -78,7 +83,7 @@ public class BoardService {
             try {
                 log.info("S3 비동기 업로드를 시작합니다. 스레드: {}", Thread.currentThread().getName());
                 String originalFilename = boardFile.getOriginalFilename();
-                String storedFileName = uploader.uploadImage(boardFile, "images");
+                String storedFileName = uploader.uploadImage(boardFile, postImageFolder);
 
                 // 비동기 작업 내에서 DB에 접근하려면 다시 엔티티를 조회해야 할 수 있습니다.
                 BoardEntity boardToUpdate = boardRepository.findById(savedEntity.getId())
