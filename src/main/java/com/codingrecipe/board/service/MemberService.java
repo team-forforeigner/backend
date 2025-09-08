@@ -37,8 +37,8 @@ public class MemberService {
     @Value("${cloud.aws.s3.folder.profile}")
     private String profileFolder;
 
-    @Value("${cloud.aws.s3.folder.badge}")
-    private String badgeFolder;
+    @Value("${cloud.aws.s3.folder.profileFolder}")
+    private String backgroundFolder;
 
     /**
      * 회원가입 처리 로직
@@ -176,7 +176,7 @@ public class MemberService {
                         uploader.deleteImage(existingProfileImageKey);
                     }
                     // 새 이미지 업로드 후 파일 키 반환
-                    return uploader.uploadImage(profileImage, "profiles");
+                    return uploader.uploadImage(profileImage, profileFolder);
                 } catch (IOException e) {
                     throw new CustomException(ErrorCode.S3_FILE_UPLOAD_FAILED);
                 }
@@ -192,7 +192,7 @@ public class MemberService {
                     if (StringUtils.hasText(existingBgImageKey)) {
                         uploader.deleteImage(existingBgImageKey);
                     }
-                    return uploader.uploadImage(backgroundImage, "backgrounds");
+                    return uploader.uploadImage(backgroundImage, backgroundFolder);
                 } catch (IOException e) {
                     throw new CustomException(ErrorCode.S3_FILE_UPLOAD_FAILED);
                 }
