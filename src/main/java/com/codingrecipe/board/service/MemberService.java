@@ -37,7 +37,7 @@ public class MemberService {
     @Value("${cloud.aws.s3.folder.profile}")
     private String profileFolder;
 
-    @Value("${cloud.aws.s3.folder.profileFolder}")
+    @Value("${cloud.aws.s3.folder.profile-background}")
     private String backgroundFolder;
 
     /**
