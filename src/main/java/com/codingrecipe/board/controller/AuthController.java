@@ -2,7 +2,7 @@ package com.codingrecipe.board.controller;
 
 import com.codingrecipe.board.dto.*;
 import com.codingrecipe.board.security.JwtUtil;
-import com.codingrecipe.board.security.UserPrincipal; // UserPrincipal 임포트
+import com.codingrecipe.board.security.UserPrincipal;
 import com.codingrecipe.board.service.LogoutService;
 import com.codingrecipe.board.service.MemberService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,10 +22,8 @@ public class AuthController {
     private final JwtUtil jwtUtil;
 
     @GetMapping("/me")
-    // [수정] String email 대신 UserPrincipal 객체를 받습니다.
     public ResponseEntity<ApiResponseDto<UserInfoDto>> getMyInfo(@AuthenticationPrincipal UserPrincipal user) {
-        // [수정] UserPrincipal에서 직접 정보를 가져옵니다.
-        UserInfoDto userInfo = memberService.getMemberInfoByEmail(user.getEmail());
+        UserInfoDto userInfo = new UserInfoDto(user.getId(), user.getEmail(), user.getNickname());
         return ResponseEntity.ok(ApiResponseDto.success(userInfo));
     }
 
@@ -55,19 +53,20 @@ public class AuthController {
 
     @PutMapping("/password")
     public ResponseEntity<ApiResponseDto<Void>> changePassword(
-            // [수정] String email 대신 UserPrincipal 객체를 받습니다.
             @AuthenticationPrincipal UserPrincipal user,
             @RequestBody PasswordChangeRequest request) {
-        memberService.changePassword(user.getEmail(), request);
+        memberService.changePassword(user, request);
         return ResponseEntity.ok(ApiResponseDto.success("비밀번호가 성공적으로 변경되었습니다."));
     }
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponseDto<Void>> logout(HttpServletRequest request) {
-        String token = jwtUtil.resolveToken(request);
-        if (token != null) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
             logoutService.logout(token);
         }
         return ResponseEntity.ok(ApiResponseDto.success("성공적으로 로그아웃되었습니다."));
     }
 }
+

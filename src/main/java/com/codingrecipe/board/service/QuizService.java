@@ -5,6 +5,7 @@ import com.codingrecipe.board.dto.*;
 import com.codingrecipe.board.exception.CustomException;
 import com.codingrecipe.board.exception.ErrorCode;
 import com.codingrecipe.board.repository.*;
+import com.codingrecipe.board.security.UserPrincipal;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,14 +32,14 @@ public class QuizService {
     private final BossStageRepository bossStageRepository;
     private final BossPhaseRepository bossPhaseRepository;
     private final BossBattleStateRepository bossBattleStateRepository;
-
+    private final TitleAndBadgeManager titleAndBadgeManager;
 
     private static final int XP_PER_LEVEL = 100;
     private static final int QUIZ_SET_SIZE = 10;
 
     @Transactional
-    public Object createQuizSet(Category category, QuizMode mode, String email) {
-        Member member = memberRepository.findByEmail(email)
+    public Object createQuizSet(Category category, QuizMode mode, UserPrincipal user) {
+        Member member = memberRepository.findById(user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         member.setQuizSetCount(member.getQuizSetCount() + 1);
@@ -55,7 +56,7 @@ public class QuizService {
                 .collect(Collectors.toList());
 
         if (attemptedQuizIds.isEmpty()) {
-            attemptedQuizIds.add(0L);
+            attemptedQuizIds.add(0L); // ID가 0인 퀴즈가 없다고 가정하여, 비어있는 IN 절 오류 방지
         }
 
         List<String> typesForMode = getTypesForMode(mode);
@@ -111,8 +112,8 @@ public class QuizService {
         return new BossBattleResponseDTO(bossStage, firstPhase, quizDTOs);
     }
 
-    public SubmitBossAnswerResponseDTO submitBossAnswer(String email, SubmitAnswerRequest request) {
-        Member member = memberRepository.findByEmail(email)
+    public SubmitBossAnswerResponseDTO submitBossAnswer(UserPrincipal user, SubmitAnswerRequest request) {
+        Member member = memberRepository.findById(user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         BossBattleState state = bossBattleStateRepository.findByMember(member)
                 .orElseThrow(() -> new IllegalStateException("진행 중인 보스전 정보가 없습니다"));
@@ -167,21 +168,20 @@ public class QuizService {
         return Arrays.stream(QuizType.values()).map(Enum::name).collect(Collectors.toList());
     }
 
-    public void updateHintSetting(String email, boolean enabled) {
-        Member member = memberRepository.findByEmail(email)
+    public void updateHintSetting(UserPrincipal user, boolean enabled) {
+        Member member = memberRepository.findById(user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         member.setHintEnabled(enabled);
     }
 
     public SubmitAnswerResponse submitAnswer(SubmitAnswerRequest request) {
-        Quiz quiz = findQuizById(request.getQuizId());
         Member member = memberRepository.findById(request.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("Member not found with id: " + request.getUserId()));
+        Quiz quiz = findQuizById(request.getQuizId());
 
         boolean isCorrect = quiz.getAnswer().equalsIgnoreCase(request.getUserAnswer().trim());
 
         member.setPlayCount(member.getPlayCount() + 1);
-        updateBadgeBasedOnPlayCount(member);
 
         if (isCorrect) {
             int earnedXp = request.isFromRetryList() ? 1 : 10;
@@ -189,8 +189,18 @@ public class QuizService {
 
             int requiredXpForNextLevel = member.getLevel() * XP_PER_LEVEL;
             if (member.getExperience() >= requiredXpForNextLevel) {
-                member.setLevel(member.getLevel() + 1);
-                updateTitleBasedOnLevel(member);
+                int newLevel = member.getLevel() + 1;
+                member.setLevel(newLevel);
+
+                // 레벨업 시, 가장 높은 등급의 칭호와 캐릭터를 자동으로 설정
+                List<String> titles = titleAndBadgeManager.getAvailableTitles(newLevel);
+                if (!titles.isEmpty()) {
+                    member.setTitle(titles.get(titles.size() - 1));
+                }
+                List<AvailableBadgeDto> badges = titleAndBadgeManager.getAvailableBadges(newLevel);
+                if(!badges.isEmpty()){
+                    member.setBadge(badges.get(badges.size()-1).getImageUrl());
+                }
             }
         }
 
@@ -203,6 +213,36 @@ public class QuizService {
         return new SubmitAnswerResponse(isCorrect, quiz.getExplanation());
     }
 
+    @Transactional(readOnly = true)
+    public List<QuizDetailResponse> getIncorrectQuizzes(UserPrincipal user) {
+        Member member = memberRepository.findById(user.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        return quizAttemptRepository.findAllByMemberAndIsCorrectFalse(member)
+                .stream()
+                .map(QuizAttempt::getQuiz)
+                .distinct()
+                .map(quiz -> new QuizDetailResponse(quiz))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuizAttemptResponse> getAttemptHistory(UserPrincipal user) {
+        List<QuizAttempt> attempts = quizAttemptRepository.findByMemberIdOrderByAttemptedAtDesc(user.getId());
+        return attempts.stream()
+                .map(QuizAttemptResponse::new)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserProfileResponse> getRanking() {
+        List<Member> topUsers = memberRepository.findTop100ByOrderByExperienceDesc();
+        return topUsers.stream()
+                .map(UserProfileResponse::new)
+                .toList();
+    }
+
+    // --- 관리자용 메소드들 ---
     public QuizAdminDetailResponse createQuiz(QuizCreateRequest request) {
         Quiz newQuiz = new Quiz();
         updateQuizFromRequest(newQuiz, request);
@@ -237,50 +277,6 @@ public class QuizService {
         return new QuizAdminDetailResponse(quiz);
     }
 
-    @Transactional(readOnly = true)
-    public List<QuizDetailResponse> getIncorrectQuizzes(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new EntityNotFoundException("Member not found with id: " + memberId));
-        return quizAttemptRepository.findAllByMemberAndIsCorrectFalse(member)
-                .stream()
-                .map(QuizAttempt::getQuiz)
-                .distinct()
-                .map(this::convertToDetailDto)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<QuizAttemptResponse> getAttemptHistory(String email) {
-        Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        List<QuizAttempt> attempts = quizAttemptRepository.findByMemberIdOrderByAttemptedAtDesc(member.getId());
-
-        return attempts.stream()
-                .map(QuizAttemptResponse::new)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public UserProfileResponse getUserProfile(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new EntityNotFoundException("Member not found with id: " + memberId));
-        return new UserProfileResponse(member);
-    }
-
-    @Transactional(readOnly = true)
-    public List<UserProfileResponse> getRanking() {
-        List<Member> topUsers = memberRepository.findTop100ByOrderByExperienceDesc();
-        return topUsers.stream()
-                .map(UserProfileResponse::new)
-                .toList();
-    }
-
-    private QuizDetailResponse convertToDetailDto(Quiz quiz) {
-        if (quiz == null) return null;
-        return new QuizDetailResponse(quiz, true);
-    }
-
     private void updateQuizFromRequest(Quiz quiz, QuizCreateRequest request) {
         quiz.setTitle(request.getTitle());
         quiz.setImageUrl(request.getImageUrl());
@@ -291,22 +287,14 @@ public class QuizService {
         quiz.setExplanation(request.getExplanation());
 
         quiz.getChoices().clear();
+        quizRepository.flush();
 
         if (request.getQuizType() == QuizType.MULTIPLE_CHOICE || request.getQuizType() == QuizType.OX) {
-            if (request.getCorrectChoiceIndex() == null || request.getChoices() == null) {
+            if (request.getChoices() == null || request.getChoices().isEmpty() || request.getCorrectChoiceIndex() == null) {
                 throw new CustomException(ErrorCode.INVALID_ARGUMENT, "객관식/OX 퀴즈는 선택지와 정답 인덱스가 필수입니다.");
             }
-            List<QuizChoice> newChoices = new ArrayList<>();
-            for (int i = 0; i < request.getChoices().size(); i++) {
-                QuizCreateRequest.ChoiceRequest choiceDto = request.getChoices().get(i);
-                QuizChoice choice = new QuizChoice();
-                choice.setContent(choiceDto.getContent());
-                choice.setAnswer(i == request.getCorrectChoiceIndex());
-                choice.setQuiz(quiz);
-                newChoices.add(choice);
-            }
+            List<QuizChoice> newChoices = mapChoicesFromDto(request.getChoices(), quiz, request.getCorrectChoiceIndex());
             quiz.getChoices().addAll(newChoices);
-
         } else if (request.getQuizType() == QuizType.SHORT_ANSWER) {
             if (request.getShortAnswer() == null || request.getShortAnswer().isBlank()) {
                 throw new CustomException(ErrorCode.INVALID_ARGUMENT, "주관식 퀴즈는 정답이 필수입니다.");
@@ -319,41 +307,24 @@ public class QuizService {
         }
     }
 
+    private List<QuizChoice> mapChoicesFromDto(List<QuizCreateRequest.ChoiceRequest> choiceDtos, Quiz quiz, int correctChoiceIndex) {
+        List<QuizChoice> choices = new ArrayList<>();
+        for (int i = 0; i < choiceDtos.size(); i++) {
+            QuizCreateRequest.ChoiceRequest dto = choiceDtos.get(i);
+            if (dto.getContent() != null && !dto.getContent().isBlank()) {
+                QuizChoice choice = new QuizChoice();
+                choice.setContent(dto.getContent());
+                choice.setAnswer(i == correctChoiceIndex);
+                choice.setQuiz(quiz);
+                choices.add(choice);
+            }
+        }
+        return choices;
+    }
+
     private Quiz findQuizById(Long quizId) {
         return quizRepository.findByIdWithChoices(quizId)
                 .orElseThrow(() -> new EntityNotFoundException("Quiz not found with id: " + quizId));
-    }
-
-    private void updateTitleBasedOnLevel(Member member) {
-        int level = member.getLevel();
-        if (level >= 25) {
-            member.setTitle("백호");
-            member.setBackgroundImageUrl("https://your-s3-bucket/backgrounds/white_tiger.png");
-        } else if (level >= 20) {
-            member.setTitle("한반도 수호자 호랑이");
-            member.setBackgroundImageUrl("https://your-s3-bucket/backgrounds/guardian_tiger.png");
-        } else if (level >= 15) {
-            member.setTitle("100일동안 마늘만 먹고 지낸 곰");
-            member.setBackgroundImageUrl("https://your-s3-bucket/backgrounds/legend_bear.png");
-        } else if (level >= 10) {
-            member.setTitle("구미호");
-            member.setBackgroundImageUrl("https://your-s3-bucket/backgrounds/gumiho.png");
-        } else if (level >= 5) {
-            member.setTitle("한반도 거북이");
-            member.setBackgroundImageUrl("https://your-s3-bucket/backgrounds/turtle.png");
-        } else {
-            member.setTitle("아기 까치");
-            member.setBackgroundImageUrl("https://your-s3-bucket/backgrounds/magpie.png");
-        }
-    }
-
-    private void updateBadgeBasedOnPlayCount(Member member) {
-        int count = member.getPlayCount();
-        if (count >= 10 && count < 100) {
-            member.setBadge("한국어 초보");
-        } else if (count >= 100) {
-            member.setBadge("명예 한국인");
-        }
     }
 }
 
