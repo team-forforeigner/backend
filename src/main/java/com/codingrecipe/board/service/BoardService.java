@@ -38,7 +38,7 @@ public class BoardService {
     private final Optional<S3UploaderService> s3UploaderService;
 
     // S3 버킷 내 게시글 이미지가 저장될 폴더 경로
-    @Value("${cloud.aws.s3.folder.post-image}")
+    @Value("${cloud.aws.s3.folder.post}")
     private String postImageFolder;
 
     @Transactional
