@@ -1,3 +1,9 @@
+-- UPDATE episode
+-- SET
+--     series_id = 4, order_series = 2, episode_title = '💊 에피소드 2. 약국에서도 상담 가능!',
+--     episode_content = JSON_ARRAY('🤧 약사에게 증상을 말하면 맞는 약을 추천해줘.', '💊 하지만 처방전 약과 다르게 약국의 기본 약은 너가 엄청 아플 때, 효과가 미미할 수 있어.', '🏥 증상이 심하면 병원에 가야 해.')
+-- WHERE episode_id = 15; << 이 구문으로 ALTER 하셔도 되지 싶어요 ! 0910
+
 -- 카테고리 생성 (테이블 이름을 survival_category로 수정)
 INSERT IGNORE INTO survival_category (category_id, category_title, category_description) VALUES
 (1, '봄', '봄 -  축제 또는 황사에 대한 시리즈를 엮음'),
@@ -64,8 +70,10 @@ INSERT IGNORE INTO episode (episode_id, series_id, order_series, episode_title, 
 (14, 4, 2, '📋 에피소드 2. 병원 가기 전 준비물!', JSON_ARRAY('🏥 진료 전에 여권 또는 외국인 등록증, (있다면)보험증을 챙기자!', '💬 증상을 한국어로 미리 준비하면 편해.','💸 진료비는 현금 또는 카드 가능해!')),
 (67, 4, 3, '🧾 에피소드 3. 진료 시작!', JSON_ARRAY('👨‍⚕️ 병원에 도착했어!','📋 안내 데스크에 문의하면 문진표를 작성하도록 안내해줄거야.','조금만 기다리면 진료를 받을 수 있어.')),
 -- 약국
-(15, 4, 2, '💊 에피소드 2. 약국에서도 상담 가능!', JSON_ARRAY('🤧 약사에게 증상을 말하면 맞는 약을 추천해줘.','💊 하지만 처방전 약과 다르게 약국의 기본 약은 너가 엄청 아플 때, 효과가 미미할 수 있어.', '🏥 증상이 심하면 병원에 가야 해.')),
-(68, 4, 3, '🔄 에피소드 3. 증상이 나아졌을까?', JSON_ARRAY('🙂 약을 먹었더니 좀 나아졌어! 조금만 더 참아볼까?', '🤒 하지만 계속 아프면 병원 진료를 받아야 해.')),
+(15, 4, 2, '💊 에피소드 2. 약국에서도 상담 가능!', JSON_ARRAY('🤧 약사에게 증상을 말하면 맞는 약을 추천해줘.',
+  '💊 하지만 처방전 약과 다르게 약국의 기본 약은 너가 엄청 아플 때, 효과가 미미할 수 있어.', '🏥 증상이 심하면 병원에 가야 해.')),
+(68, 4, 3, '🔄 에피소드 3. 증상이 나아졌을까?', JSON_ARRAY('🙂 약을 먹었더니 좀 나아졌어! 조금만 더 참아볼까?', 
+  '🤒 하지만 계속 아프면 병원 진료를 받아야 해.')),
 -- 집
 (69, 4, 2, '🛌 에피소드 2. 집에서 푹 쉬는 중!', JSON_ARRAY('🧺 물을 많이 마시고 따뜻하게 입고 있어야 해.', '📈 증상이 나빠지면 바로 병원에 가는 게 좋아.')),
 (70, 4, 3, '❗ 에피소드 3. 상태가 나빠졌어!', JSON_ARRAY('😷 계속 열이 나고 기침도 심해졌어...', '🚑 이럴 땐 병원에 가야 해!')),
@@ -155,8 +163,10 @@ INSERT IGNORE INTO choice (episode_id, next_episode_id, choice_description) VALU
 (13, 14, JSON_OBJECT('text', '가까운 내과 검색')), (13, 15, JSON_OBJECT('text', '동네 약국에서 상담')), (13, 69, JSON_OBJECT('text', '그냥 집에서 쉰다')),
 (14, 67, JSON_OBJECT('text', '준비물을 모두 챙기기')), (14, 67, JSON_OBJECT('text', '한국어로 증상을 미리 준비하기')),
 (67, 16, JSON_OBJECT('text', '접수대에 문의하기')), (67, 16, JSON_OBJECT('text', '문진표를 작성하기')),
+
 (15, 68, JSON_OBJECT('text', '약사에게 증상 설명하고 약 사기')), (15, 68, JSON_OBJECT('text', '그냥 감기약 구매하기')),
 (68, 16, JSON_OBJECT('text', '더 참아보기')), (68, 16, JSON_OBJECT('text', '이제 병원 가기')),
+
 (69, 70, JSON_OBJECT('text', '몸을 따뜻하게 하고 물 많이 마시기')), (69, 70, JSON_OBJECT('text', '누워서 푹 쉬기')),
 (70, 16, JSON_OBJECT('text', '병원을 검색하여 방문하기')), (70, 16, JSON_OBJECT('text', '약을 구매하여 먹기')),
 
