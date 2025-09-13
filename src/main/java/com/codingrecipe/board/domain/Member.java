@@ -41,11 +41,7 @@ public class Member extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    @Builder.Default
-    private MemberStatus status = MemberStatus.ACTIVE;
+    private LocalDateTime suspendedUntil;
 
     @Builder.Default
     private int level = 1;
@@ -86,4 +82,10 @@ public class Member extends BaseEntity {
     public String getRoleKey() {
         return this.role.getKey();
     }
+
+
+    public boolean isSuspended() {
+        return this.suspendedUntil != null && this.suspendedUntil.isAfter(LocalDateTime.now());
+    }
 }
+

@@ -1,7 +1,6 @@
 package com.codingrecipe.board.service;
 
 import com.codingrecipe.board.domain.Member;
-import com.codingrecipe.board.domain.MemberStatus;
 import com.codingrecipe.board.domain.Role;
 import com.codingrecipe.board.dto.*;
 import com.codingrecipe.board.exception.CustomException;
@@ -56,18 +55,12 @@ public class MemberService {
         emailService.sendVerificationEmail(savedMember);
     }
 
-    /**
-     * 미인증 사용자의 정보를 업데이트
-     */
     private void updateUnverifiedMember(Member member, SignUpRequestDto dto) {
         member.setPassword(passwordEncoder.encode(dto.getPassword()));
         member.setNationality(dto.getNationality());
-        member.setNickname(dto.getEmail()); // 초기 닉네임은 이메일로 설정
+        member.setNickname(dto.getEmail());
     }
 
-    /**
-     * 신규 회원 엔티티를 생성
-     */
     private Member createNewMember(SignUpRequestDto dto) {
         return Member.builder()
                 .email(dto.getEmail())
@@ -79,9 +72,6 @@ public class MemberService {
                 .build();
     }
 
-    /**
-     * 이메일 인증 토큰을 검증하여 회원 상태를 '인증 완료'로 변경
-     */
     public void verifyEmailByToken(String token) {
         String email = jwtUtil.getEmailFromVerificationToken(token);
         Member member = memberRepository.findByEmail(email)
@@ -90,7 +80,7 @@ public class MemberService {
     }
 
     /**
-     * 로그인 처리 및 JWT 토큰 발급
+     * 로그인 처리 및 JWT 토큰 발급 (정지 상태 확인 로직 추가)
      */
     @Transactional
     public String login(String email, String password) {
@@ -105,8 +95,10 @@ public class MemberService {
             throw new CustomException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
 
-        if (member.getStatus() == MemberStatus.SUSPENDED) {
-            throw new CustomException(ErrorCode.USER_SUSPENDED);
+        // 정지 상태를 확인하는 가장 중요한 로직
+        if (member.isSuspended()) {
+            String message = "계정이 " + member.getSuspendedUntil().toString() + "까지 정지되었습니다.";
+            throw new CustomException(ErrorCode.USER_SUSPENDED, message);
         }
 
         member.setLastLoginAt(LocalDateTime.now());
@@ -115,9 +107,6 @@ public class MemberService {
         return jwtUtil.generateToken(member);
     }
 
-    /**
-     * 임시 비밀번호를 생성하여 이메일로 발송
-     */
     public void sendTempPassword(EmailRequestDto dto) {
         Member member = memberRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -126,9 +115,6 @@ public class MemberService {
         emailService.sendTempPasswordEmail(dto.getEmail(), tempPassword);
     }
 
-    /**
-     * 현재 로그인된 사용자의 비밀번호를 변경
-     */
     public void changePassword(UserPrincipal user, PasswordChangeRequest dto) {
         Member member = memberRepository.findByEmail(user.getEmail())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -142,7 +128,6 @@ public class MemberService {
         member.setPassword(passwordEncoder.encode(dto.getNewPassword()));
     }
 
-    // --- 프로필 조회 로직 ---
     @Transactional(readOnly = true)
     public ProfileResponseDto getUserProfile(Long memberId) {
         Member member = memberRepository.findById(memberId)
@@ -154,21 +139,17 @@ public class MemberService {
         return new ProfileResponseDto(member, availableTitles, availableBadges);
     }
 
-    // --- 프로필 수정 로직 ---
     public void updateProfile(Long memberId, ProfileUpdateRequestDto requestDto, MultipartFile profileImage, MultipartFile backgroundImage) throws IOException {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 1. 프로필 이미지 업데이트
         if (profileImage != null && !profileImage.isEmpty()) {
             String existingProfileImageKey = member.getProfileImageUrl();
             String newProfileImageKey = s3UploaderService.map(uploader -> {
                 try {
-                    // 기존 이미지가 있으면 S3에서 삭제
                     if (StringUtils.hasText(existingProfileImageKey)) {
                         uploader.delete(existingProfileImageKey);
                     }
-                    // 새 이미지 업로드 후 파일 키 반환
                     return uploader.upload(profileImage, "profiles");
                 } catch (IOException e) {
                     throw new CustomException(ErrorCode.S3_FILE_UPLOAD_FAILED);
@@ -176,8 +157,6 @@ public class MemberService {
             }).orElse(null);
             member.setProfileImageUrl(newProfileImageKey);
         }
-
-        // 2. 배경 이미지 업데이트
         if (backgroundImage != null && !backgroundImage.isEmpty()) {
             String existingBgImageKey = member.getBackgroundImageUrl();
             String newBgImageKey = s3UploaderService.map(uploader -> {
@@ -192,15 +171,10 @@ public class MemberService {
             }).orElse(null);
             member.setBackgroundImageUrl(newBgImageKey);
         }
-
-        // 3. 텍스트 정보 업데이트 (닉네임, 칭호, 배지)
         if (requestDto != null) {
-            // 닉네임 업데이트
             if (StringUtils.hasText(requestDto.getNickname())) {
                 member.setNickname(requestDto.getNickname());
             }
-
-            // 칭호 업데이트
             if (StringUtils.hasText(requestDto.getSelectedTitle())) {
                 List<String> availableTitles = titleAndBadgeManager.getAvailableTitles(member.getLevel());
                 if (availableTitles.contains(requestDto.getSelectedTitle())) {
@@ -209,8 +183,6 @@ public class MemberService {
                     throw new CustomException(ErrorCode.FORBIDDEN_ACCESS, "아직 사용할 수 없는 칭호입니다.");
                 }
             }
-
-            // 캐릭터 업데이트
             if (StringUtils.hasText(requestDto.getSelectedBadge())) {
                 List<AvailableBadgeDto> availableBadges = titleAndBadgeManager.getAvailableBadges(member.getLevel());
                 boolean isSelectable = availableBadges.stream()
@@ -248,10 +220,21 @@ public class MemberService {
         return memberRepository.findByEmailStartingWith(emailKeyword);
     }
 
-    public void updateMemberStatus(Long memberId, MemberStatus status) {
+    /**
+     * 관리자가 회원을 기간제 정지시키거나 정지를 해제하는 메소드
+     * @param memberId 정지시킬 회원의 ID
+     * @param days 정지할 기간(일). 0 또는 음수 입력 시 정지 해제.
+     */
+    public void suspendMember(Long memberId, int days) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        member.setStatus(status);
+
+        if (days > 0) {
+            LocalDateTime suspendedUntil = LocalDateTime.now().plusDays(days);
+            member.setSuspendedUntil(suspendedUntil);
+        } else {
+            member.setSuspendedUntil(null);
+        }
     }
 }
 
