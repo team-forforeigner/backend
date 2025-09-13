@@ -97,7 +97,7 @@ public class MemberService {
     }
 
     /**
-     * 로그인 처리 및 JWT 토큰 발급
+     * 로그인 처리 및 JWT 토큰 발급 (정지 상태 확인 로직 추가)
      */
     @Transactional
     public String login(String email, String password) {
@@ -112,8 +112,10 @@ public class MemberService {
             throw new CustomException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
 
-        if (member.getStatus() == MemberStatus.SUSPENDED) {
-            throw new CustomException(ErrorCode.USER_SUSPENDED);
+        // 정지 상태를 확인하는 가장 중요한 로직
+        if (member.isSuspended()) {
+            String message = "계정이 " + member.getSuspendedUntil().toString() + "까지 정지되었습니다.";
+            throw new CustomException(ErrorCode.USER_SUSPENDED, message);
         }
 
         member.setLastLoginAt(LocalDateTime.now());
@@ -255,10 +257,21 @@ public class MemberService {
         return memberRepository.findByEmailStartingWith(emailKeyword);
     }
 
-    public void updateMemberStatus(Long memberId, MemberStatus status) {
+    /**
+     * 관리자가 회원을 기간제 정지시키거나 정지를 해제하는 메소드
+     * @param memberId 정지시킬 회원의 ID
+     * @param days 정지할 기간(일). 0 또는 음수 입력 시 정지 해제.
+     */
+    public void suspendMember(Long memberId, int days) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        member.setStatus(status);
+
+        if (days > 0) {
+            LocalDateTime suspendedUntil = LocalDateTime.now().plusDays(days);
+            member.setSuspendedUntil(suspendedUntil);
+        } else {
+            member.setSuspendedUntil(null);
+        }
     }
 }
 

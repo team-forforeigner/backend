@@ -3,7 +3,6 @@ package com.codingrecipe.board.controller;
 import com.codingrecipe.board.domain.Member;
 import com.codingrecipe.board.dto.*;
 import com.codingrecipe.board.exception.ErrorCode;
-import com.codingrecipe.board.repository.ReportRepository;
 import com.codingrecipe.board.service.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -75,7 +74,7 @@ public class AdminController {
 
     // --- 퀴즈 관리 ---
     @PostMapping("/quizzes")
-    public ResponseEntity<ApiResponseDto<QuizAdminDetailResponse>> createQuiz(@Valid @RequestBody QuizCreateRequest request) { // @Valid 추가
+    public ResponseEntity<ApiResponseDto<QuizAdminDetailResponse>> createQuiz(@Valid @RequestBody QuizCreateRequest request) {
         QuizAdminDetailResponse createdQuiz = quizService.createQuiz(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponseDto.success(createdQuiz));
     }
@@ -93,7 +92,7 @@ public class AdminController {
     }
 
     @PutMapping("/quizzes/{quizId}")
-    public ResponseEntity<ApiResponseDto<QuizAdminDetailResponse>> updateQuiz(@PathVariable Long quizId, @Valid @RequestBody QuizCreateRequest request) { // @Valid 추가
+    public ResponseEntity<ApiResponseDto<QuizAdminDetailResponse>> updateQuiz(@PathVariable Long quizId, @Valid @RequestBody QuizCreateRequest request) {
         QuizAdminDetailResponse updatedQuiz = quizService.updateQuiz(quizId, request);
         return ResponseEntity.ok(ApiResponseDto.success(updatedQuiz));
     }
@@ -128,10 +127,14 @@ public class AdminController {
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponseDto.error(ErrorCode.USER_NOT_FOUND)));
     }
 
-    @PatchMapping("/members/{id}/status")
-    public ResponseEntity<ApiResponseDto<Void>> updateMemberStatus(@PathVariable Long id, @RequestBody MemberStatusUpdateRequestDto dto) {
-        memberService.updateMemberStatus(id, dto.getStatus());
-        return ResponseEntity.ok(ApiResponseDto.success("회원 상태가 성공적으로 변경되었습니다."));
+    // 기존 상태 변경 API를 기간제 정지 API로 변경합니다.
+    @PostMapping("/members/{id}/suspend")
+    public ResponseEntity<ApiResponseDto<Void>> suspendMember(@PathVariable Long id, @RequestBody MemberSuspensionRequestDto dto) {
+        memberService.suspendMember(id, dto.getSuspensionDays());
+        String message = dto.getSuspensionDays() > 0 ?
+                "회원을 " + dto.getSuspensionDays() + "일간 정지 처리했습니다." :
+                "회원 정지를 해제했습니다.";
+        return ResponseEntity.ok(ApiResponseDto.success(message));
     }
 
     @DeleteMapping("/members/{id}")
@@ -172,3 +175,4 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponseDto.success("댓글을 삭제했습니다."));
     }
 }
+

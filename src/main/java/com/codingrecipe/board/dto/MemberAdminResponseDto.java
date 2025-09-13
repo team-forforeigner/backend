@@ -9,29 +9,30 @@ import java.time.LocalDateTime;
 
 @Getter
 public class MemberAdminResponseDto {
-    private Long id;
-    private String email;
-    private String nickname;
-    private Role role;
-    private MemberStatus status;
-    private boolean emailVerified;
-    private int level;
-
-    private String nationality;
-    private LocalDateTime createdAt; // 가입일
-    private LocalDateTime lastLoginAt; // 마지막 접속일
+    private final Long id;
+    private final String email;
+    private final String nickname;
+    private final Role role;
+    private final MemberStatus status;
+    private final LocalDateTime suspendedUntil;
+    private final boolean emailVerified;
+    private final int level;
+    private final String nationality;
+    private final LocalDateTime createdAt;
+    private final LocalDateTime lastLoginAt;
 
     public MemberAdminResponseDto(Member member) {
         this.id = member.getId();
         this.email = member.getEmail();
         this.nickname = member.getNickname();
         this.role = member.getRole();
-        this.status = member.getStatus();
+        this.status = member.isSuspended() ? MemberStatus.SUSPENDED : MemberStatus.ACTIVE;
+        this.suspendedUntil = member.getSuspendedUntil();
         this.emailVerified = member.isEmailVerified();
         this.level = member.getLevel();
-
         this.nationality = member.getNationality();
-        this.createdAt = member.getCreatedTime(); // BaseEntity로부터 상속받은 createdTime 사용
+        this.createdAt = member.getCreatedTime();
         this.lastLoginAt = member.getLastLoginAt();
     }
 }
+
