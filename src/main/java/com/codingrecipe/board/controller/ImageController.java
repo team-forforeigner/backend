@@ -30,7 +30,8 @@ public class ImageController {
     private final S3UploaderService s3UploaderService;
 
     /**
-     * 이미지 업로드
+     * [테스트용] 이미지 업로드
+     * - 테스트 폴더(test)에 업로드
      */
     @PostMapping
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadImage(
