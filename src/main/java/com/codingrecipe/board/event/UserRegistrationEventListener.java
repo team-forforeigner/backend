@@ -3,6 +3,7 @@ package com.codingrecipe.board.event;
 import com.codingrecipe.board.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -16,7 +17,7 @@ public class UserRegistrationEventListener {
     private final EmailService emailService;
 
     @Async("threadPoolTaskExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT) // 트랜잭션 커밋 후 실행 (@Transactional 필요)
+    @EventListener
     public void handleUserRegistration(UserRegistrationEvent event) {
         try {
             log.error("[UserRegistrationEventListener] {}님 인증 메일 발송", event.getMember().getEmail());
@@ -26,8 +27,8 @@ public class UserRegistrationEventListener {
         }
     }
 
-    @Async("threadPoolTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT) // 트랜잭션 커밋 후 실행 (@Transactional 필요)
+    @EventListener
     public void handleTempPasswordRequest(TempPasswordEvent event) {
         try {
             emailService.sendTempPasswordEmail(event.getMember().getEmail(), event.getTempPassword());

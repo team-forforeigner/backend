@@ -35,7 +35,6 @@ public class EmailService {
      * MemberService에서 이 메소드를 호출하면, 실제 메일 발송을 기다리지 않고 즉시 다음 코드로 진행됩니다.
      */
     @Async("threadPoolTaskExecutor")
-    @Transactional
     public void sendVerificationEmail(Member member) {
         try {
             String token = jwtUtil.generateToken(member);
@@ -48,7 +47,6 @@ public class EmailService {
     }
 
     @Async("threadPoolTaskExecutor")
-    @Transactional
     public void sendTempPasswordEmail(String email, String tempPassword) {
         try {
             String subject = "[For-Foreigner] 임시 비밀번호 안내입니다";
