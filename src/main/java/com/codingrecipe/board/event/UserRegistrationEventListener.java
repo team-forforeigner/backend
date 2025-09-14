@@ -15,9 +15,8 @@ public class UserRegistrationEventListener {
 
     private final EmailService emailService;
 
-    // spring에 의해 자동으로 호출됨
     @Async("threadPoolTaskExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT) // 트랜잭션 커밋 후 실행 (@Transactional 필요)
     public void handleUserRegistration(UserRegistrationEvent event) {
         try {
             log.error("[UserRegistrationEventListener] {}님 인증 메일 발송", event.getMember().getEmail());
@@ -28,7 +27,7 @@ public class UserRegistrationEventListener {
     }
 
     @Async("threadPoolTaskExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT) // 트랜잭션 커밋 후 실행 (@Transactional 필요)
     public void handleTempPasswordRequest(TempPasswordEvent event) {
         try {
             emailService.sendTempPasswordEmail(event.getMember().getEmail(), event.getTempPassword());
