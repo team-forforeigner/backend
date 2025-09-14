@@ -6,11 +6,14 @@ import com.codingrecipe.board.security.UserPrincipal;
 import com.codingrecipe.board.service.LogoutService;
 import com.codingrecipe.board.service.MemberService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -34,9 +37,18 @@ public class AuthController {
     }
 
     @GetMapping("/verify")
-    public ResponseEntity<ApiResponseDto<Void>> verifyEmail(@RequestParam("token") String token) {
+    public void verifyEmail(@RequestParam("token") String token, HttpServletResponse response) {
         memberService.verifyEmailByToken(token);
-        return ResponseEntity.ok(ApiResponseDto.success("이메일 인증이 성공적으로 완료되었습니다. 이제 로그인할 수 있습니다."));
+//        return ResponseEntity.ok(ApiResponseDto.success("이메일 인증이 성공적으로 완료되었습니다. 이제 로그인할 수 있습니다."));
+
+        // [변경] JSON 응답을 반환하지 않고, 프론트엔드 페이지로 리다이렉트
+        String frontVerifiedPage = "https://forforeigner.site/auth/verified";
+        try {
+            response.sendRedirect(frontVerifiedPage);
+        } catch (IOException e) {
+            // 예외 처리: 로깅 또는 사용자에게 에러 페이지 안내
+            throw new RuntimeException("프론트 페이지 이동 실패", e);
+        }
     }
 
     @PostMapping("/login")
