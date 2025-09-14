@@ -20,9 +20,10 @@ public class UserRegistrationEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleUserRegistration(UserRegistrationEvent event) {
         try {
+            log.error("[UserRegistrationEventListener] {}님 인증 메일 발송", event.getMember().getEmail());
             emailService.sendVerificationEmail(event.getMember());
         } catch (Exception e) {
-            log.error("{}님 인증 메일 발송 실패", event.getMember().getEmail(), e);
+            log.error("[UserRegistrationEventListener] {}님 인증 메일 발송 실패", event.getMember().getEmail(), e);
         }
     }
 
@@ -32,7 +33,7 @@ public class UserRegistrationEventListener {
         try {
             emailService.sendTempPasswordEmail(event.getMember().getEmail(), event.getTempPassword());
         } catch (Exception e) {
-            log.error("{}님 임시 비밀번호 메일 발송 실패", event.getMember(), e);
+            log.error("[UserRegistrationEventListener] {}님 임시 비밀번호 메일 발송 실패", event.getMember(), e);
         }
     }
 }
