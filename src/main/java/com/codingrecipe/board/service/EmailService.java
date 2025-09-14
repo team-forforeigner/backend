@@ -35,20 +35,26 @@ public class EmailService {
      */
     @Async("threadPoolTaskExecutor")
     public void sendVerificationEmail(Member member) {
-        // [수정] Member 객체 자체를 넘겨서 토큰을 생성하도록 변경
-        String token = jwtUtil.generateToken(member);
-        String verificationLink = baseUrl + "?token=" + token;
-        String htmlContent = generateVerificationEmailTemplate(verificationLink, member.getNickname());
-
-        sendEmail(member.getEmail(), VERIFICATION_SUBJECT, htmlContent);
+        try {
+            String token = jwtUtil.generateToken(member);
+            String verificationLink = baseUrl + "?token=" + token;
+            String htmlContent = generateVerificationEmailTemplate(verificationLink, member.getNickname());
+            sendEmail(member.getEmail(), VERIFICATION_SUBJECT, htmlContent);
+        } catch (Exception e) {
+            log.error("메일 발송 실패: {}", member.getEmail(), e);
+        }
     }
 
     @Async("threadPoolTaskExecutor")
     public void sendTempPasswordEmail(String email, String tempPassword) {
-        String subject = "[For-Foreigner] 임시 비밀번호 안내입니다";
-        String username = email.split("@")[0]; // 이메일 앞부분을 username으로 사용
-        String htmlText = generateTempPasswordEmailTemplate(username, tempPassword);
-        sendEmail(email, subject, htmlText);
+        try {
+            String subject = "[For-Foreigner] 임시 비밀번호 안내입니다";
+            String username = email.split("@")[0]; // 이메일 앞부분을 username으로 사용
+            String htmlText = generateTempPasswordEmailTemplate(username, tempPassword);
+            sendEmail(email, subject, htmlText);
+        } catch (Exception e) {
+            log.error("메일 발송 실패: {}", email, e);
+        }
     }
 
     public String createCode() {

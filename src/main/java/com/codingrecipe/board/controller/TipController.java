@@ -7,6 +7,7 @@ import com.codingrecipe.board.dto.TipResponse;
 import com.codingrecipe.board.dto.TipUpdateRequest;
 import com.codingrecipe.board.exception.TipAlreadyExistsException;
 import com.codingrecipe.board.exception.TipNotFoundException;
+import com.codingrecipe.board.security.UserPrincipal;
 import com.codingrecipe.board.service.TipServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -57,7 +59,8 @@ public class TipController {
 
     // 설명 : 팁 1개 조회
     @GetMapping("/admin/tips/{id}")
-    public ResponseEntity<ApiResponse<TipResponse>> getTipById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<TipResponse>> getTipById(@PathVariable Long id,
+                                                               @AuthenticationPrincipal UserPrincipal user) {
         try {
             return ok(tipServiceImpl.getTipById(id), "성공적으로 조회되었습니다.");
         } catch (TipNotFoundException e) {
@@ -67,7 +70,8 @@ public class TipController {
 
     // 설명 : 팁 1개 저장
     @PostMapping("/admin/tips")
-    public ResponseEntity<ApiResponse<Map<String, Long>>> saveTip(@RequestBody @Valid TipCreateRequest dto) {
+    public ResponseEntity<ApiResponse<Map<String, Long>>> saveTip(@RequestBody @Valid TipCreateRequest dto,
+                                                                  @AuthenticationPrincipal UserPrincipal user) {
         try {
             Long id = tipServiceImpl.createTip(dto);
             return created(Map.of("id", id), "팁이 성공적으로 등록되었습니다.");
@@ -81,7 +85,8 @@ public class TipController {
     // 설명 : 팁 수정
     @PutMapping("/admin/tips/{id}")
     public ResponseEntity<ApiResponse<Map<String, Boolean>>> updateTip(@PathVariable Long id,
-                                                    @RequestBody @Valid TipUpdateRequest dto) {
+                                                                       @RequestBody @Valid TipUpdateRequest dto,
+                                                                       @AuthenticationPrincipal UserPrincipal user) {
         boolean changed = tipServiceImpl.updateTip(id, dto);
 
         String message = changed ? "수정 되었습니다." : "수정 되지 않았습니다.";
@@ -90,7 +95,8 @@ public class TipController {
 
     // 설명 : 팁 삭제
     @DeleteMapping("/admin/tips/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteTip(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteTip(@PathVariable Long id,
+                                                       @AuthenticationPrincipal UserPrincipal user) {
         try {
             tipServiceImpl.deleteTip(id);
             return ok(null, "팁이 삭제되었습니다.");
@@ -101,7 +107,8 @@ public class TipController {
 
     // 설명 : 팁 여러 개 저장 (JSON 배열로 받기)
     @PostMapping("/admin/tips/import")
-    public ResponseEntity<ApiResponse<Map<String, String>>> importFromJson(@RequestBody @Valid List<TipCreateRequest> tipList) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> importFromJson(@RequestBody @Valid List<TipCreateRequest> tipList,
+                                                                           @AuthenticationPrincipal UserPrincipal user) {
         String result = tipServiceImpl.importFromJson(tipList);
         return ok(Map.of("message", result), "팁이 일괄 등록되었습니다.");
     }
