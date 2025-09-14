@@ -4,6 +4,8 @@ import com.codingrecipe.board.domain.Member;
 import com.codingrecipe.board.domain.MemberStatus;
 import com.codingrecipe.board.domain.Role;
 import com.codingrecipe.board.dto.*;
+import com.codingrecipe.board.event.TempPasswordEvent;
+import com.codingrecipe.board.event.UserRegistrationEvent;
 import com.codingrecipe.board.exception.CustomException;
 import com.codingrecipe.board.exception.ErrorCode;
 import com.codingrecipe.board.repository.MemberRepository;
@@ -11,6 +13,7 @@ import com.codingrecipe.board.security.JwtUtil;
 import com.codingrecipe.board.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +36,7 @@ public class MemberService {
     private final JwtUtil jwtUtil;
     private final TitleAndBadgeManager titleAndBadgeManager;
     private final Optional<S3UploaderService> s3UploaderService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${cloud.aws.s3.folder.profile}")
     private String profileFolder;
@@ -44,9 +48,12 @@ public class MemberService {
      * 회원가입 처리 로직
      */
     public void join(SignUpRequestDto dto) {
+        // 1. 비밀번호 확인
         if (!dto.getPassword().equals(dto.getPasswordCheck())) {
             throw new CustomException(ErrorCode.INVALID_PASSWORD);
         }
+
+        // 2. 기존 회원 확인
         Optional<Member> existingMemberOpt = memberRepository.findByEmail(dto.getEmail());
         if (existingMemberOpt.isPresent()) {
             Member existingMember = existingMemberOpt.get();
@@ -54,13 +61,17 @@ public class MemberService {
                 throw new CustomException(ErrorCode.ALREADY_EXIST_EMAIL);
             } else {
                 updateUnverifiedMember(existingMember, dto);
-                emailService.sendVerificationEmail(existingMember);
+                // 이벤트 발행 (메일 발송)
+                eventPublisher.publishEvent(new UserRegistrationEvent(existingMember));
                 return;
             }
         }
+
+        // 3. 신규 회원 생성
         Member newMember = createNewMember(dto);
         Member savedMember = memberRepository.save(newMember);
-        emailService.sendVerificationEmail(savedMember);
+        // 이벤트 발행 (메일 발송)
+        eventPublisher.publishEvent(new UserRegistrationEvent(savedMember));
     }
 
     /**
@@ -132,7 +143,8 @@ public class MemberService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         String tempPassword = emailService.createCode();
         member.setPassword(passwordEncoder.encode(tempPassword));
-        emailService.sendTempPasswordEmail(dto.getEmail(), tempPassword);
+        // 이벤트 발행 (메일 발송)
+        eventPublisher.publishEvent(new TempPasswordEvent(member, tempPassword));
     }
 
     /**
