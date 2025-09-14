@@ -20,20 +20,23 @@ public class UserRegistrationEventListener {
     @EventListener
     public void handleUserRegistration(UserRegistrationEvent event) {
         try {
-            log.error("[UserRegistrationEventListener] {}님 인증 메일 발송", event.getMember().getEmail());
+            String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
+            log.error("[{}}] {}님 인증 메일 전송", methodName, event.getMember().getEmail());
             emailService.sendVerificationEmail(event.getMember());
         } catch (Exception e) {
-            log.error("[UserRegistrationEventListener] {}님 인증 메일 발송 실패", event.getMember().getEmail(), e);
+            log.error("{}님 임시 비밀번호 메일 전송 실패", event.getMember(), e);
         }
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT) // 트랜잭션 커밋 후 실행 (@Transactional 필요)
+    @Async("threadPoolTaskExecutor")
     @EventListener
     public void handleTempPasswordRequest(TempPasswordEvent event) {
         try {
+            String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
+            log.error("[{}}] {}님 인증 메일 전송", methodName, event.getMember().getEmail());
             emailService.sendTempPasswordEmail(event.getMember().getEmail(), event.getTempPassword());
         } catch (Exception e) {
-            log.error("[UserRegistrationEventListener] {}님 임시 비밀번호 메일 발송 실패", event.getMember(), e);
+            log.error("{}님 임시 비밀번호 메일 전송 실패", event.getMember(), e);
         }
     }
 }

@@ -30,10 +30,9 @@ public class EmailService {
     private String baseUrl;
 
     private static final String VERIFICATION_SUBJECT = "[ForForeigner] 이메일 인증을 완료해주세요";
+    private static final String TEMP_PASSWORD_SUBJECT = "[For-Foreigner] 임시 비밀번호 안내입니다";
 
-    /**
-     * MemberService에서 이 메소드를 호출하면, 실제 메일 발송을 기다리지 않고 즉시 다음 코드로 진행됩니다.
-     */
+    // 회원가입 인증 메일 발송
     @Async("threadPoolTaskExecutor")
     public void sendVerificationEmail(Member member) {
         try {
@@ -42,20 +41,16 @@ public class EmailService {
             String htmlContent = generateVerificationEmailTemplate(verificationLink, member.getNickname());
             sendEmail(member.getEmail(), VERIFICATION_SUBJECT, htmlContent);
         } catch (Exception e) {
-            log.error("메일 발송 실패: {}", member.getEmail(), e);
+            String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
+            log.error("[{}] 메일 전송 실패: {}", methodName, member.getEmail(), e);
         }
     }
 
+    // 임시 비밀번호 메일 발송
     @Async("threadPoolTaskExecutor")
     public void sendTempPasswordEmail(String email, String tempPassword) {
-        try {
-            String subject = "[For-Foreigner] 임시 비밀번호 안내입니다";
-            String username = email.split("@")[0]; // 이메일 앞부분을 username으로 사용
-            String htmlText = generateTempPasswordEmailTemplate(username, tempPassword);
-            sendEmail(email, subject, htmlText);
-        } catch (Exception e) {
-            log.error("메일 발송 실패: {}", email, e);
-        }
+        String htmlContent = generateTempPasswordEmailTemplate(email, tempPassword);
+        sendEmail(email, TEMP_PASSWORD_SUBJECT, htmlContent);
     }
 
     public String createCode() {
@@ -72,20 +67,21 @@ public class EmailService {
             helper.setText(htmlContent, true);
             mailSender.send(message);
         } catch (MessagingException e) {
-            log.error("메일 전송에 실패했습니다. 받는 사람: {}", to, e);
+            String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
+            log.error("[{}}] 메일 전송 실패: {}", methodName,to, e);
             throw new RuntimeException("메일 전송에 실패했습니다", e);
         }
     }
 
-    // 이메일 인증 템플릿
-    private String generateVerificationEmailTemplate(String verificationLink, String username) {
+    // 회원가입 인증 템플릿
+    private String generateVerificationEmailTemplate(String verificationLink, String email) {
         try {
             ClassPathResource resource = new ClassPathResource("templates/verification-email.html");
             String template = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            return template.replace("${username}", username)
+            return template.replace("${email}", email)
                     .replace("${verificationLink}", verificationLink);
         } catch (IOException e) {
-            throw new RuntimeException("인증 메일 템플릿을 불러오는 데 실패했습니다", e);
+            throw new RuntimeException("회원가입 인증 메일 템플릿 불러오기 실패: ", e);
         }
     }
 
@@ -97,7 +93,7 @@ public class EmailService {
             return template.replace("${username}", username)
                     .replace("${tempPassword}", tempPassword);
         } catch (IOException e) {
-            throw new RuntimeException("임시 비밀번호 메일 템플릿 불러오기 실패", e);
+            throw new RuntimeException("임시 비밀번호 메일 템플릿 불러오기 실패: ", e);
         }
     }
 
