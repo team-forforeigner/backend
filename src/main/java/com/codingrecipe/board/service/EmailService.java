@@ -38,7 +38,7 @@ public class EmailService {
         try {
             String token = jwtUtil.generateToken(member);
             String verificationLink = baseUrl + "?token=" + token;
-            String htmlContent = generateVerificationEmailTemplate(verificationLink, member.getNickname());
+            String htmlContent = generateVerificationEmailTemplate(verificationLink, member.getEmail());
             sendEmail(member.getEmail(), VERIFICATION_SUBJECT, htmlContent);
         } catch (Exception e) {
             String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();

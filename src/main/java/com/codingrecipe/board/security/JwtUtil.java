@@ -37,6 +37,7 @@ public class JwtUtil {
      */
     public String generateToken(Member member) {
         Claims claims = Jwts.claims();
+        claims.put("subject", member.getEmail()); // [추가] 이메일 인증용 토큰에서 이메일이 추출 안 되는 문제를 해결하기 위해.
         claims.put("id", member.getId());
         claims.put("email", member.getEmail());
         claims.put("nickname", member.getNickname());
