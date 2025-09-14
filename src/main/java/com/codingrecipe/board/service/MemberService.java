@@ -12,6 +12,7 @@ import com.codingrecipe.board.repository.MemberRepository;
 import com.codingrecipe.board.security.JwtUtil;
 import com.codingrecipe.board.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -102,7 +104,8 @@ public class MemberService {
      */
     public void verifyEmailByToken(String token) {
         String email = jwtUtil.getEmailFromVerificationToken(token);
-        Member member = memberRepository.findByEmail(email)
+        log.info("토큰 이메일: '{}'", email); // 작은 따옴표로 감싸서 확인
+        Member member = memberRepository.findByEmail(email.toLowerCase())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         member.setEmailVerified(true);
     }
