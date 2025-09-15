@@ -95,7 +95,6 @@ public class MemberService {
             throw new CustomException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
 
-        // 정지 상태를 확인하는 가장 중요한 로직
         if (member.isSuspended()) {
             String message = "계정이 " + member.getSuspendedUntil().toString() + "까지 정지되었습니다.";
             throw new CustomException(ErrorCode.USER_SUSPENDED, message);
@@ -128,10 +127,23 @@ public class MemberService {
         member.setPassword(passwordEncoder.encode(dto.getNewPassword()));
     }
 
+    /**
+     * 프로필 조회 시, S3 파일 키를 완전한 Presigned URL로 변환하는 로직 추가
+     */
     @Transactional(readOnly = true)
     public ProfileResponseDto getUserProfile(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // S3 파일 키를 완전한 URL로 변환합니다.
+        s3UploaderService.ifPresent(uploader -> {
+            if (StringUtils.hasText(member.getProfileImageUrl())) {
+                member.setProfileImageUrl(uploader.generatePresignedUrl(member.getProfileImageUrl()));
+            }
+            if (StringUtils.hasText(member.getBackgroundImageUrl())) {
+                member.setBackgroundImageUrl(uploader.generatePresignedUrl(member.getBackgroundImageUrl()));
+            }
+        });
 
         List<String> availableTitles = titleAndBadgeManager.getAvailableTitles(member.getLevel());
         List<AvailableBadgeDto> availableBadges = titleAndBadgeManager.getAvailableBadges(member.getLevel());
@@ -148,7 +160,7 @@ public class MemberService {
             String newProfileImageKey = s3UploaderService.map(uploader -> {
                 try {
                     if (StringUtils.hasText(existingProfileImageKey)) {
-                        uploader.delete(existingProfileImageKey);
+                        uploader.delete(uploader.extractFileKeyFromUrl(existingProfileImageKey));
                     }
                     return uploader.upload(profileImage, "profiles");
                 } catch (IOException e) {
@@ -162,7 +174,7 @@ public class MemberService {
             String newBgImageKey = s3UploaderService.map(uploader -> {
                 try {
                     if (StringUtils.hasText(existingBgImageKey)) {
-                        uploader.delete(existingBgImageKey);
+                        uploader.delete(uploader.extractFileKeyFromUrl(existingBgImageKey));
                     }
                     return uploader.upload(backgroundImage, "backgrounds");
                 } catch (IOException e) {

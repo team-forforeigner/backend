@@ -33,7 +33,7 @@ public class JwtUtil {
     }
 
     /**
-     * Member 객체의 정보를 담아 새로운 JWT 토큰을 생성합니다.
+     * Member 객체의 정보를 담아 새로운 로그인 유지용 JWT 토큰을 생성합니다.
      */
     public String generateToken(Member member) {
         Claims claims = Jwts.claims();
@@ -51,20 +51,20 @@ public class JwtUtil {
     }
 
     /**
-     * 이메일 인증용 토큰을 생성합니다. (Subject에 이메일만 포함)
+     * [이메일 인증 전용] 이메일 주소만 담긴 단순한 토큰을 생성합니다.
      */
     public String generateVerificationToken(String email) {
         return Jwts.builder()
-                .setSubject(email)
+                .setSubject(email) // subject에 이메일만 저장
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + expirationMs)) // 유효 기간은 동일하게 설정
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 
 
     /**
-     * 토큰을 파싱하여 사용자 정보를 담은 UserPrincipal 객체를 반환합니다.
+     * [로그인 유지용] 토큰을 파싱하여 사용자 정보를 담은 UserPrincipal 객체를 반환합니다.
      */
     public UserPrincipal parseToken(String token) {
         Claims claims = extractAllClaims(token);
@@ -80,7 +80,7 @@ public class JwtUtil {
     }
 
     /**
-     * 이메일 인증용 토큰에서 이메일만 간단히 추출합니다.
+     * [이메일 인증 전용] 토큰에서 이메일(subject)만 간단히 추출합니다.
      */
     public String getEmailFromVerificationToken(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -95,7 +95,7 @@ public class JwtUtil {
     }
 
     /**
-     * 토큰을 파싱하여 모든 정보를 추출합니다.
+     * 토큰을 파싱하여 모든 클레임(정보)을 추출합니다.
      */
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()

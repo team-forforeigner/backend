@@ -21,6 +21,7 @@ public class AuthController {
     private final LogoutService logoutService;
     private final JwtUtil jwtUtil;
 
+
     @GetMapping("/me")
     public ResponseEntity<ApiResponseDto<UserInfoDto>> getMyInfo(@AuthenticationPrincipal UserPrincipal user) {
         UserInfoDto userInfo = new UserInfoDto(user.getId(), user.getEmail(), user.getNickname());

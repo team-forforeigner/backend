@@ -31,15 +31,13 @@ public class EmailService {
 
     private static final String VERIFICATION_SUBJECT = "[ForForeigner] 이메일 인증을 완료해주세요";
 
-    /**
-     * --- @Async 어노테이션 추가 ---
-     * MemberService에서 이 메소드를 호출하면, 실제 메일 발송을 기다리지 않고 즉시 다음 코드로 진행됩니다.
-     */
     @Async("threadPoolTaskExecutor")
     public void sendVerificationEmail(Member member) {
         log.info("{}님에게 인증 메일을 비동기로 발송합니다. 스레드: {}", member.getEmail(), Thread.currentThread().getName());
-        // [수정] Member 객체 자체를 넘겨서 토큰을 생성하도록 변경
-        String token = jwtUtil.generateToken(member);
+
+        // [수정] 로그인용 토큰 대신, 이메일 인증 전용 토큰을 생성하도록 변경
+        String token = jwtUtil.generateVerificationToken(member.getEmail());
+
         String verificationLink = baseUrl + "?token=" + token;
 
         String htmlContent = generateEmailTemplate(verificationLink, member.getNickname());
@@ -47,16 +45,12 @@ public class EmailService {
         log.info("{}님에게 인증 메일 비동기 발송 완료.", member.getEmail());
     }
 
-    /**
-     * --- @Async 어노테이션 추가 ---
-     */
     @Async("threadPoolTaskExecutor")
     public void sendTempPasswordEmail(String email, String tempPassword) {
         log.info("{}님에게 임시 비밀번호를 비동기로 발송합니다. 스레드: {}", email, Thread.currentThread().getName());
         String subject = "[For-Foreigner] 임시 비밀번호 안내입니다";
         String htmlText = "<h1>임시 비밀번호 안내</h1>"
                 + "<p>로그인 후, 반드시 비밀번호를 변경해주세요</p>"
-
                 + "<p>임시 비밀번호: <strong>" + tempPassword + "</strong></p>";
         sendEmail(email, subject, htmlText);
         log.info("{}님에게 임시 비밀번호 비동기 발송 완료.", email);

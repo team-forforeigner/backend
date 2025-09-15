@@ -38,7 +38,6 @@ public class QuizController {
     public ResponseEntity<ApiResponseDto<SubmitAnswerResponse>> submitAnswer(
             @AuthenticationPrincipal UserPrincipal user,
             @RequestBody SubmitAnswerRequest request) {
-        // UserPrincipal에서 가져온 ID를 사용하도록 하여 보안을 강화합니다.
         request.setUserId(user.getId());
         SubmitAnswerResponse response = quizService.submitAnswer(request);
         return ResponseEntity.ok(ApiResponseDto.success(response));
