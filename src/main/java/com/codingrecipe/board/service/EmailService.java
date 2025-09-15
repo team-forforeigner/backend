@@ -29,7 +29,7 @@ public class EmailService {
     @Value("${app.verification-base-url}")
     private String baseUrl;
 
-    private static final String VERIFICATION_SUBJECT = "[ForForeigner] 이메일 인증을 완료해주세요";
+    private static final String VERIFICATION_SUBJECT = "[ForForeigner] 회원가입 이메일 인증을 완료해주세요";
     private static final String TEMP_PASSWORD_SUBJECT = "[For-Foreigner] 임시 비밀번호 안내입니다";
 
     // 회원가입 인증 메일 발송
