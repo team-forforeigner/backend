@@ -12,7 +12,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -35,15 +35,16 @@ public class EmailService {
     // 회원가입 인증 메일 발송
     @Async("threadPoolTaskExecutor")
     public void sendVerificationEmail(Member member) {
-        try {
-            String token = jwtUtil.generateToken(member);
-            String verificationLink = baseUrl + "?token=" + token;
-            String htmlContent = generateVerificationEmailTemplate(verificationLink, member.getEmail());
-            sendEmail(member.getEmail(), VERIFICATION_SUBJECT, htmlContent);
-        } catch (Exception e) {
-            String methodName = Thread.currentThread().getStackTrace()[1].getMethodName();
-            log.error("[{}] 메일 전송 실패: {}", methodName, member.getEmail(), e);
-        }
+        log.info("{}님에게 인증 메일을 비동기로 발송합니다. 스레드: {}", member.getEmail(), Thread.currentThread().getName());
+
+        // [수정] 로그인용 토큰 대신, 이메일 인증 전용 토큰을 생성하도록 변경
+        String token = jwtUtil.generateVerificationToken(member.getEmail());
+
+        String verificationLink = baseUrl + "?token=" + token;
+
+        String htmlContent = generateVerificationEmailTemplate(verificationLink, member.getNickname());
+        sendEmail(member.getEmail(), VERIFICATION_SUBJECT, htmlContent);
+        log.info("{}님에게 인증 메일 비동기 발송 완료.", member.getEmail());
     }
 
     // 임시 비밀번호 메일 발송
