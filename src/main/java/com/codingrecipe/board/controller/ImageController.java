@@ -56,14 +56,10 @@ public class ImageController {
      */
     @GetMapping("/view")
     public ResponseEntity<?> getImage(@RequestParam String fileKey) {
-        log.info("이미지 요청: {}", fileKey);
-
         try {
             byte[] imageBytes = s3UploaderService.downloadAsBytes(fileKey);
             String mimeType = FileUtil.getMimeType(fileKey);
             MediaType mediaType = MediaType.parseMediaType(mimeType);
-
-            log.info("이미지 조회 성공: {}", fileKey);
 
             return ResponseEntity.ok()
                     .contentType(mediaType)
@@ -72,6 +68,26 @@ public class ImageController {
         } catch (Exception e) {
             log.error("이미지 조회 실패: {}", fileKey, e);
             return ApiResponseUtil.fail(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 조회 실패");
+        }
+    }
+
+    /**
+     * Presigned URL 발급 API
+     */
+    @GetMapping("/presigned")
+    public ResponseEntity<ApiResponse<String>> getPresignedUrl(@RequestParam String fileKey) {
+        try {
+            String presignedUrl = s3UploaderService.generatePresignedUrl(fileKey);
+
+            if (presignedUrl == null) {
+                return ApiResponseUtil.fail(HttpStatus.INTERNAL_SERVER_ERROR, "Presigned URL 생성 실패");
+            }
+
+            return ApiResponseUtil.ok(presignedUrl, "Presigned URL 생성 완료");
+
+        } catch (Exception e) {
+            log.error("Presigned URL 생성 중 오류 발생: {}", fileKey, e);
+            return ApiResponseUtil.fail(HttpStatus.INTERNAL_SERVER_ERROR, "Presigned URL 생성 실패");
         }
     }
 
