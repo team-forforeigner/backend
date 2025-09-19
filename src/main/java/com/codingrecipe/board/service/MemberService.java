@@ -46,9 +46,6 @@ public class MemberService {
     @Value("${cloud.aws.s3.folder.profile-background}")
     private String backgroundFolder;
 
-    /**
-     * 회원가입 처리 로직
-     */
     public void join(SignUpRequestDto dto) {
         // 1. 비밀번호 확인
         if (!dto.getPassword().equals(dto.getPasswordCheck())) {
@@ -109,9 +106,6 @@ public class MemberService {
         member.setEmailVerified(true);
     }
 
-    /**
-     * 로그인 처리 및 JWT 토큰 발급 (정지 상태 확인 로직 추가)
-     */
     @Transactional
     public String login(String email, String password) {
         Member member = memberRepository.findByEmail(email)
@@ -164,15 +158,11 @@ public class MemberService {
         member.setPassword(passwordEncoder.encode(dto.getNewPassword()));
     }
 
-    /**
-     * 프로필 조회 시, S3 파일 키를 완전한 Presigned URL로 변환하는 로직 추가
-     */
     @Transactional(readOnly = true)
     public ProfileResponseDto getUserProfile(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // S3 파일 키를 완전한 URL로 변환합니다.
         s3UploaderService.ifPresent(uploader -> {
             if (StringUtils.hasText(member.getProfileImageUrl())) {
                 member.setProfileImageUrl(uploader.generatePresignedUrl(member.getProfileImageUrl()));
@@ -257,6 +247,26 @@ public class MemberService {
         }
     }
 
+    /**
+     * [신규] 다른 사용자의 공개 프로필 조회 로직
+     */
+    @Transactional(readOnly = true)
+    public PublicProfileResponseDto getPublicUserProfile(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // S3 파일 키를 완전한 URL로 변환합니다.
+        s3UploaderService.ifPresent(uploader -> {
+            if (StringUtils.hasText(member.getProfileImageUrl())) {
+                member.setProfileImageUrl(uploader.generatePresignedUrl(member.getProfileImageUrl()));
+            }
+            if (StringUtils.hasText(member.getBackgroundImageUrl())) {
+                member.setBackgroundImageUrl(uploader.generatePresignedUrl(member.getBackgroundImageUrl()));
+            }
+        });
+
+        return new PublicProfileResponseDto(member);
+    }
 
     // --- 관리자용 메소드들 ---
     @Transactional(readOnly = true)
@@ -281,11 +291,6 @@ public class MemberService {
         return memberRepository.findByEmailStartingWith(emailKeyword);
     }
 
-    /**
-     * 관리자가 회원을 기간제 정지시키거나 정지를 해제하는 메소드
-     * @param memberId 정지시킬 회원의 ID
-     * @param days 정지할 기간(일). 0 또는 음수 입력 시 정지 해제.
-     */
     public void suspendMember(Long memberId, int days) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
