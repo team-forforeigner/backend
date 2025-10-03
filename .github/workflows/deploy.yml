@@ -44,12 +44,19 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_KEY }}
           script: |
-            echo "⚡ 서버 재시작 시작"
+            echo "⚡ 서버 재시작"
 
             mkdir -p /home/ec2-user/app
 
             # 새로운 JAR 덮어쓰기
             mv /home/ec2-user/temp/build/libs/app.jar /home/ec2-user/app/app.jar
+
+            # .env 파일 환경 변수 확인 (systemd가 읽도록)
+            ENV_FILE=/home/ec2-user/app/.env
+            if [ -f "$ENV_FILE" ]; then
+              echo "환경 변수 로드: $ENV_FILE"
+              export $(grep -v '^#' $ENV_FILE | xargs)
+            fi
 
             # 권한 조정 (필요하다면)
             chmod 755 /home/ec2-user/app/app.jar
@@ -66,6 +73,3 @@ jobs:
             rm -rf /home/ec2-user/temp
 
             echo "✅ 배포 완료"
-    
-
-    
